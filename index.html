@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/curated-pick-logo.svg" />
+    <title>The Curated Pick</title>
+    <meta name="description" content="Expert reviews, exclusive deals, and comprehensive guides for top curated products." />
+    <meta property="og:title" content="The Curated Pick" />
+    <meta property="og:description" content="Expert reviews, exclusive deals, and comprehensive guides for top curated products." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+      (function() {
+        try {
+          // Always ensure clean light theme
+          localStorage.removeItem('curated_pick_theme');
+          document.documentElement.classList.remove('dark');
+          document.documentElement.setAttribute('data-theme', 'light');
+        } catch(e) {}
+      })();
+    </script>
+  </head>
+  <body class="bg-[#f8f9ff] text-[#0b1c30] font-sans antialiased selection:bg-[#26fedc] selection:text-[#000c1b]">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

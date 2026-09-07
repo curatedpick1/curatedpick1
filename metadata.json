@@ -1,0 +1,6 @@
+{
+  "name": "The Curated Pick",
+  "description": "Expert reviews, exclusive deals, and comprehensive guides for top curated products.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
