@@ -1,0 +1,70 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ProductCard from '../components/ProductCard.astro';
+import Icon from '../components/Icon.astro';
+import Contact from '../components/Contact.astro';
+import { getCatalog } from '../lib/catalog';
+const catalog = await getCatalog();
+const products = catalog.products;
+const spotlight = products.find(p => p.featured) || products[0];
+const categories = [...new Set(products.map(p => p.category))].sort();
+---
+<Layout demo={catalog.demo} image={spotlight?.poster_url}>
+  <section class="hero">
+    <div class="hero-copy wrap"><p class="hero-badge"><Icon name="check" size={14} /> A little more discovery. A little less scrolling.</p><h1>Discover your next favorite.<br /><span>We’ll help you find it.</span></h1><p class="hero-intro">Everyday upgrades, useful finds, and things you’ll love.<br class="desktop-break" /> Explore a pick. Choose the store that works for you.</p>
+      <form id="product-search" class="hero-search" role="search"><label class="sr-only" for="search-finds">Search products</label><Icon name="search" /><input type="search" placeholder="Search products, categories, or stores…" id="search-finds" autocomplete="off" /><button type="submit" aria-label="Show search results"><Icon name="right" /></button></form>
+      <p class="hero-footnote">Found something on our Pinterest? Find it here.</p>
+    </div>
+  </section>
+  <section class="collection wrap" id="discover" aria-labelledby="collection-title">
+    <div class="category-heading"><h2>Browse categories</h2><button class="clear-filter" id="clear-category" hidden>Clear filters</button></div>
+    <div class="filter-list" aria-label="Filter products by category"><button class="filter active" data-filter="All" aria-pressed="true"><Icon name="grid" size={15} />All finds <span>{products.length}</span></button>{categories.map(category => <button class="filter" data-filter={category} aria-pressed="false">{category}</button>)}</div>
+    <div class="section-heading"><div><h2 id="collection-title">Fresh finds for you</h2><p>Worth a look. Yours to choose.</p></div><p class="result-count" aria-live="polite" id="result-count">{products.length} {products.length === 1 ? 'find' : 'finds'}</p></div>
+    <div class="product-grid">{products.map((product, index) => <ProductCard product={product} index={index} />)}</div>
+    <div class="empty-state" id="empty-results" hidden={products.length > 0}><Icon name="search" size={32} /><h3>{products.length ? 'No matching finds.' : 'The first finds are on their way.'}</h3><p>{products.length ? 'Try a different search or clear your filters.' : 'Come back soon for a fresh collection of considered picks.'}</p>{products.length > 0 && <button class="pill-button" id="reset-filters">Show all finds <Icon name="right" size={16} /></button>}</div>
+    {products.length > 0 && <p class="end-note">You’re all caught up. More good finds on the way.</p>}
+  </section>
+  {spotlight && <section class="spotlight-section wrap" aria-labelledby="spotlight-title"><a class="spotlight" href={`/products/${spotlight.slug}/`}><div class="spotlight-copy"><span class="hero-badge">In the spotlight</span><h2 id="spotlight-title">{spotlight.title}</h2><p>{spotlight.description}</p><span class="pill-button">Take a closer look <Icon name="right" size={17} /></span></div><div class="spotlight-image"><img src={spotlight.poster_url} alt={spotlight.poster_alt} width="700" height="500" loading="lazy" /></div></a></section>}
+  <section class="how-it-works wrap" aria-label="How it works"><div><Icon name="search" size={23} /><h2>Discover a find</h2><p>Browse the collection or search for something specific.</p></div><div><Icon name="bag" size={23} /><h2>Choose your store</h2><p>See where to buy and check the current price there.</p></div><div><Icon name="arrow" size={23} /><h2>Make it yours</h2><p>Order directly with the store. They handle the rest.</p></div></section>
+  <Contact />
+</Layout>
+<script>
+  const input = document.querySelector<HTMLInputElement>('#search-finds');
+  const buttons = [...document.querySelectorAll<HTMLButtonElement>('[data-filter]')];
+  const cards = [...document.querySelectorAll<HTMLElement>('[data-product-card]')];
+  const clear = document.querySelector<HTMLButtonElement>('#clear-category');
+  let category = 'All';
+  function update() {
+    const query = input?.value.trim().toLowerCase() || '';
+    let count = 0;
+    for (const card of cards) {
+      const matches = (category === 'All' || card.dataset.category === category) && (card.dataset.search || '').includes(query);
+      card.hidden = !matches; if (matches) count++;
+    }
+    const empty = document.querySelector<HTMLElement>('#empty-results');
+    if (empty) empty.hidden = count > 0;
+    const result = document.querySelector('#result-count');
+    if (result) result.textContent = `${count} ${count === 1 ? 'find' : 'finds'}`;
+    const heading = document.querySelector('#collection-title');
+    if (heading) heading.textContent = query ? `Results for “${input?.value.trim()}”` : category === 'All' ? 'Fresh finds for you' : category;
+    if (clear) clear.hidden = category === 'All' && !query;
+    buttons.forEach(button => { const active = button.dataset.filter === category; button.setAttribute('aria-pressed', String(active)); button.classList.toggle('active', active); });
+    const url = new URL(location.href);
+    if (category === 'All') url.searchParams.delete('category'); else url.searchParams.set('category', category);
+    if (query) url.searchParams.set('q', input?.value.trim() || ''); else url.searchParams.delete('q');
+    history.replaceState(null, '', url);
+    if (document.activeElement?.matches('#search-finds, [data-filter], #reset-filters, #clear-category')) document.dispatchEvent(new Event('catalog-filtered'));
+  }
+  function reset() { category = 'All'; if (input) input.value = ''; update(); }
+  input?.addEventListener('input', update);
+  buttons.forEach(button => button.addEventListener('click', () => { category = button.dataset.filter || 'All'; update(); }));
+  document.querySelector('#reset-filters')?.addEventListener('click', () => { reset(); input?.focus(); });
+  clear?.addEventListener('click', reset);
+  document.querySelector('#product-search')?.addEventListener('submit', event => { event.preventDefault(); update(); document.querySelector('#discover')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' }); });
+  const params = new URLSearchParams(location.search);
+  const initial = params.get('category');
+  if (initial && buttons.some(b => b.dataset.filter === initial)) category = initial;
+  if (input) input.value = params.get('q') || '';
+  update();
+  if (location.hash === '#search-finds') input?.focus();
+</script>

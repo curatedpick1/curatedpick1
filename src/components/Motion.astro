@@ -1,0 +1,20 @@
+<script>
+  const preference = matchMedia('(prefers-reduced-motion: reduce)');
+  const targets = [...document.querySelectorAll<HTMLElement>('.section-heading, .pick, .spotlight, .how-it-works > div, .contact-copy, .contact-form, .detail-copy, .related-section > .section-heading')];
+  let observer: IntersectionObserver | undefined;
+  function setup() {
+    observer?.disconnect();
+    targets.forEach(el=>el.classList.remove('reveal-pending'));
+    if (preference.matches) return;
+    observer = new IntersectionObserver(entries=>entries.forEach(entry=>{
+      if (entry.isIntersecting) { const el = entry.target as HTMLElement; el.classList.remove('reveal-pending'); el.classList.add('reveal-in'); observer?.unobserve(el); }
+    }), {threshold:0.08, rootMargin:'0px 0px 35px 0px'});
+    targets.forEach((el,index)=>{ if(el.getBoundingClientRect().top > innerHeight && !el.hidden) { el.style.setProperty('--reveal-delay', `${el.matches('.pick') ? (index % 3)*55 : 0}ms`); el.classList.add('reveal-pending'); observer!.observe(el); } });
+  }
+  setup(); preference.addEventListener('change',setup);
+  targets.forEach(el=>el.addEventListener('animationend', event=>{ if (event.animationName === 'arrive') el.classList.remove('reveal-in'); }));
+  // Keyboard focus and filtering should never leave useful content hidden.
+  document.addEventListener('focusin', event=>{ if(event.target instanceof HTMLElement) event.target.closest('.reveal-pending')?.classList.remove('reveal-pending'); });
+  document.addEventListener('catalog-filtered',()=>{ targets.forEach(el=>{if(el.matches('.pick')) {el.classList.remove('reveal-pending');observer?.unobserve(el);}}); });
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') setup(); });
+</script>

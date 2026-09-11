@@ -1,0 +1,78 @@
+---
+import '@fontsource-variable/dm-sans';
+import Icon from '../components/Icon.astro';
+import '../styles/global.css';
+import '../styles/interactive.css';
+import Assistant from '../components/Assistant.astro';
+import Motion from '../components/Motion.astro';
+interface Props { title?: string; description?: string; image?: string; demo?: boolean; noindex?: boolean; }
+const { title = 'The Curated Pick — Discover your next favorite.', description = 'Discover considered finds for your home, your routine, and everywhere in between. Explore a product, choose a store, and make it yours.', image, demo = false, noindex = false } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site || Astro.url.origin);
+const pinterest = import.meta.env.PUBLIC_PINTEREST_URL || 'https://www.pinterest.com/thecuratedpick1/';
+
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title><meta name="description" content={description} />
+    <meta name="theme-color" content="#f8f9ff" /><link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href={canonical} />
+    {(demo || noindex) && <meta name="robots" content="noindex, nofollow" />}
+    <meta property="og:type" content="website" /><meta property="og:title" content={title} />
+    <meta property="og:description" content={description} /><meta property="og:url" content={canonical} />
+    <meta property="og:site_name" content="The Curated Pick" />
+    {image && <meta property="og:image" content={new URL(image, canonical)} />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="pinterest-rich-pin" content="false" />
+    {import.meta.env.PUBLIC_PINTEREST_VERIFY && <meta name="p:domain_verify" content={import.meta.env.PUBLIC_PINTEREST_VERIFY} />}
+    <script is:inline>
+      try {
+        const preference = localStorage.getItem('curated-theme');
+        document.documentElement.dataset.theme = preference === 'dark' || (!preference && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+      } catch { /* The site also works when browser storage is unavailable. */ }
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    {demo && <div class="preview-note">Preview collection · Illustrative products. Store links are not active.</div>}
+    <header class="site-header">
+      <div class="header-inner wrap">
+        <a class="wordmark" href="/" aria-label="The Curated Pick home"><img src="/favicon.svg" width="36" height="36" alt="" /><span>The Curated Pick</span></a>
+        <nav class="desktop-nav" aria-label="Main navigation"><a href="/#discover" aria-current={Astro.url.pathname === '/' ? 'page' : undefined}>Explore</a><a href="/about/">About us</a><a href="/contact/">Contact</a><a href={pinterest} class="pinterest-link" target="_blank" rel="noopener noreferrer">Find us on Pinterest <Icon name="arrow" size={15} /></a></nav>
+        <div class="header-actions">
+          <a href="/#search-finds" class="icon-button" aria-label="Search products"><Icon name="search" /></a>
+          <button class="icon-button theme-toggle" aria-label="Switch color theme" title="Switch color theme"><span class="moon-icon"><Icon name="moon" /></span><span class="sun-icon"><Icon name="sun" /></span></button>
+          <details class="mobile-menu"><summary class="icon-button" aria-label="Open navigation menu"><Icon name="menu" /></summary><nav aria-label="Mobile menu"><a href="/#discover">Explore products</a><a href="/about/">About us</a><a href="/contact/">Contact</a><a href="/disclosure/">Affiliate disclosure</a><a href="/privacy/">Privacy</a><a href={pinterest} target="_blank" rel="noopener noreferrer">Pinterest <Icon name="arrow" size={14} /></a></nav></details>
+        </div>
+      </div>
+    </header>
+    <main id="main"><slot /></main>
+    <footer class="site-footer">
+      <div class="wrap footer-top"><div><a class="wordmark footer-brand" href="/"><img src="/favicon.svg" width="32" height="32" alt="" />The Curated Pick</a><p>Good products. A little less searching.</p></div><a class="pill-button secondary" href={pinterest} target="_blank" rel="noopener noreferrer">More finds on Pinterest <Icon name="arrow" size={16} /></a></div>
+      <div class="wrap footer-bottom"><p>&copy; {new Date().getFullYear()} The Curated Pick</p><nav aria-label="Footer"><a href="/about/">About</a><a href="/disclosure/">Affiliate disclosure</a><a href="/privacy/">Privacy</a><a href="/contact/">Contact</a></nav></div>
+      <p class="wrap legal-line">As an Amazon Associate I earn from qualifying purchases. Other store links may also earn us a commission, at no extra cost to you.</p>
+    </footer>
+    <nav class="bottom-nav" aria-label="Quick navigation"><a href="/" aria-current={Astro.url.pathname === '/' ? 'page' : undefined}><Icon name="home" size={19} /><span>Home</span></a><a href="/#discover"><Icon name="grid" size={19} /><span>Explore</span></a><a href={pinterest} target="_blank" rel="noopener noreferrer"><Icon name="arrow" size={19} /><span>Pinterest</span></a></nav>
+    <script>
+      const themeButton = document.querySelector<HTMLButtonElement>('.theme-toggle');
+      const updateThemeLabel = () => themeButton?.setAttribute('aria-label', document.documentElement.dataset.theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+      updateThemeLabel();
+      themeButton?.addEventListener('click', () => {
+        const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = theme;
+        try { localStorage.setItem('curated-theme', theme); } catch { /* Optional preference. */ }
+        updateThemeLabel();
+      });
+      const menu = document.querySelector<HTMLDetailsElement>('.mobile-menu');
+      document.addEventListener('keydown', event => { if (event.key === 'Escape' && menu?.open) { menu.open = false; menu.querySelector('summary')?.focus(); } });
+      document.addEventListener('click', event => { if (menu?.open && event.target instanceof Node && !menu.contains(event.target)) menu.open = false; });
+      menu?.querySelectorAll('a').forEach(link => link.addEventListener('click', () => { menu.open = false; }));
+      document.querySelectorAll<HTMLAnchorElement>('a[href="/#search-finds"]').forEach(link => link.addEventListener('click', () => { document.querySelector<HTMLInputElement>('#search-finds')?.focus(); }));
+    </script>
+    <Assistant />
+    <Motion />
+    <noscript><style is:inline>.chat-launcher, [data-open-assistant], .contact-form { display: none !important; }</style></noscript>
+  </body>
+</html>
+

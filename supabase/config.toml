@@ -1,0 +1,6 @@
+project_id = "curated-pick-final"
+
+[functions.publisher]
+# The handler validates a private x-publisher-secret before any database/network operation.
+# Browser JWTs, including self-created Supabase users, do not authorize publishing.
+verify_jwt = false

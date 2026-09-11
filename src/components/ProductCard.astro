@@ -1,0 +1,12 @@
+---
+import type { Product } from '../../shared/catalog';
+import Icon from './Icon.astro';
+interface Props { product: Product; index?: number; }
+const { product, index = 0 } = Astro.props;
+---
+<article class="pick" data-product-card data-category={product.category} data-search={`${product.title} ${product.category} ${product.description} ${product.tags.join(' ')} ${product.stores.map(s => s.name).join(' ')}`.toLowerCase()}>
+  <a href={`/products/${product.slug}/`} class="pick-link">
+    <div class="pick-image"><img src={product.poster_url} alt={product.poster_alt} width="700" height="650" loading={index < 3 ? 'eager' : 'lazy'} decoding="async" />{product.featured && <span class="pick-badge">Curated pick</span>}</div>
+    <div class="pick-body"><p class="pick-meta">{product.category}</p><h3>{product.title}</h3><p class="pick-description">{product.description}</p><div class="pick-footer"><span>{product.stores.length ? `${product.stores.length} ${product.stores.length === 1 ? 'store' : 'stores'} to explore` : 'Preview product'}</span><span class="pick-cta">View find <Icon name="arrow" size={15} /></span></div></div>
+  </a>
+</article>
