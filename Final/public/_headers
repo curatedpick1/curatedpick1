@@ -1,0 +1,10 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+/catalog-version.json
+  Cache-Control: no-cache, must-revalidate
+/pinterest-connect/*
+  Referrer-Policy: no-referrer
+  Cache-Control: no-store

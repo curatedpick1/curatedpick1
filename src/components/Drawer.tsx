@@ -5,7 +5,6 @@ import {
   Star,
   Tag,
   BookOpen,
-  PlusCircle,
   ShieldCheck,
   ExternalLink,
   Layers,
@@ -239,51 +238,6 @@ export const Drawer: React.FC<DrawerProps> = ({
                 </span>
               </button>
 
-              {/* Admin Portal & Controls (Only visible to Admin role) */}
-              {user?.isLoggedIn && user?.role === 'admin' && (
-                <div className="pt-2 mt-2 border-t border-[#c3c6ce]/30 dark:border-slate-800 space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#006b5b] dark:text-[#26fedc] px-3 block">
-                    Admin Tools
-                  </span>
-
-                  <button
-                    id="btn-drawer-admin-dashboard"
-                    onClick={() => {
-                      onSelectTab('admin-dashboard');
-                      onClose();
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      currentTab === 'admin-dashboard'
-                        ? 'bg-[#000c1b] dark:bg-[#26fedc] text-[#26fedc] dark:text-[#000c1b] shadow-xs'
-                        : 'text-[#000c1b] dark:text-white bg-[#26fedc]/15 hover:bg-[#26fedc]/30'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>Admin Dashboard</span>
-                    </div>
-                    <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-[#000c1b] text-[#26fedc] dark:bg-white dark:text-[#000c1b]">
-                      Telemetry
-                    </span>
-                  </button>
-
-                  <button
-                    id="btn-drawer-add-product"
-                    onClick={() => {
-                      onSelectTab('add-product');
-                      onClose();
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                      currentTab === 'add-product'
-                        ? 'bg-[#000c1b] dark:bg-[#26fedc] text-[#26fedc] dark:text-[#000c1b] font-bold'
-                        : 'text-[#006b5b] dark:text-[#26fedc] hover:bg-[#eff4ff] dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    <PlusCircle className="w-3.5 h-3.5" />
-                    <span>Add New Product</span>
-                  </button>
-                </div>
-              )}
             </div>
           </div>
 

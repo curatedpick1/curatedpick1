@@ -1,0 +1,56 @@
+---
+import Icon from './Icon.astro';
+---
+<button class="chat-launcher" id="open-assistant" aria-label="Open Curated assistant" aria-haspopup="dialog" aria-controls="assistant-dialog"><span class="chat-symbol" aria-hidden="true">c.</span><span>Find something good</span><Icon name="arrow" size={16} /></button>
+<dialog id="assistant-dialog" class="assistant-dialog" aria-labelledby="assistant-title">
+  <header class="assistant-header"><div><p class="eyebrow">A LITTLE HELP FINDING IT</p><h2 id="assistant-title">Curated assistant<span>.</span></h2></div><button class="icon-button" id="close-assistant" aria-label="Close assistant"><Icon name="close" /></button></header>
+  <p class="assistant-caption">Catalog search & site help. Runs locally, without generative AI.</p>
+  <div class="chat-log" id="chat-log" role="log" aria-label="Conversation" aria-live="polite"><div class="chat-message assistant-message">Looking for something? Tell me a product, category, or interest. I can also help with store links, prices, and contacting us.</div></div>
+  <div class="chat-suggestions"><button data-prompt="Show me the collection">Explore the collection</button><button data-prompt="Where do I check prices?">About prices</button><button data-prompt="Contact">Contact us</button></div>
+  <form id="assistant-form"><label class="sr-only" for="assistant-input">Message the assistant</label><input id="assistant-input" placeholder="Try headphones, kitchen, or lighting…" maxlength="300" required autocomplete="off" /><button class="icon-button" type="submit" aria-label="Send message"><Icon name="right" /></button></form>
+  <div class="assistant-bottom"><span>Messages stay on this page until you leave.</span><button id="reset-chat">Clear chat</button></div>
+</dialog>
+<script>
+  type Pick = { title: string; slug: string; category: string; description: string; tags: string[]; stores: { name: string }[] };
+  const dialog = document.querySelector<HTMLDialogElement>('#assistant-dialog')!;
+  const log = document.querySelector<HTMLElement>('#chat-log')!;
+  const input = document.querySelector<HTMLInputElement>('#assistant-input')!;
+  const form = document.querySelector<HTMLFormElement>('#assistant-form')!;
+  let catalog: Pick[] | undefined;
+  let busy = false;
+  let opener: HTMLElement | null = null;
+  const greeting = log.textContent || '';
+  const contact = () => [{ title: 'Get in touch', slug: '/contact/' }];
+  function message(text: string, user = false, links: {title: string; slug: string}[] = []) {
+    const bubble = document.createElement('div'); bubble.className = `chat-message ${user ? 'user-message' : 'assistant-message'}`; bubble.textContent = text;
+    if (links.length) { const list = document.createElement('div'); list.className = 'chat-results'; links.forEach(item => { const a = document.createElement('a'); a.textContent = item.title + ' ↗'; a.href = item.slug.startsWith('/') ? item.slug : `/products/${encodeURIComponent(item.slug)}/`; list.append(a); }); bubble.append(list); }
+    log.append(bubble); while (log.children.length > 30) log.firstElementChild?.remove(); log.scrollTop = log.scrollHeight;
+  }
+  document.querySelectorAll<HTMLElement>('[data-open-assistant], #open-assistant').forEach(button => button.addEventListener('click', () => { opener = button; dialog.showModal(); document.body.classList.add('chat-open'); input.focus(); }));
+  document.querySelector('#close-assistant')?.addEventListener('click', () => dialog.close());
+  dialog.addEventListener('click', event => { if (event.target === dialog) { const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); } });
+  dialog.addEventListener('close', () => { document.body.classList.remove('chat-open'); opener?.focus(); });
+  async function answer(prompt: string) {
+    if (busy || !prompt.trim()) return;
+    busy = true; input.value = ''; message(prompt, true); form.setAttribute('aria-busy', 'true');
+    form.querySelector('button')!.disabled = true;
+    try {
+      const q = prompt.toLowerCase();
+      if (/\b(contact|email|help|support)\b/.test(q)) { message('You can email us about a product, a broken link, or a collaboration. For an existing order, contact the store where you purchased it.', false, contact()); return; }
+      if (/\b(price|prices|cheap|cheapest|discount|budget|under)\b|\$/.test(q)) { message('Open a product and choose a store to see its current price. I do not have live prices or verified discounts, so I cannot rank products by cost. You can compare the stores listed on each product page.'); return; }
+      if (/\b(order|return|refund|delivery|shipping|payment)\b/.test(q)) { message('Orders, shipping, and returns are handled by the store you choose. Check its terms before buying; for an existing order, contact that store directly.'); return; }
+      if (/\b(affiliate|commission|disclosure)\b/.test(q)) { message('We may earn a commission if you buy through our links, at no extra cost to you.', false, [{title:'Read our affiliate disclosure',slug:'/disclosure/'}]); return; }
+      if (/^(hi|hey|hello)[! .]*$/.test(q)) { message('Hello! What are you looking for? Try a category like kitchen, an interest like lighting, or a product like headphones.'); return; }
+      if (!catalog) { const response = await fetch('/assistant-catalog.json', {signal: AbortSignal.timeout(10000)}); if (!response.ok) throw new Error('catalog'); catalog = await response.json(); if (!Array.isArray(catalog)) throw new Error('catalog'); }
+      const all = /\b(collection|everything|all|browse)\b/.test(q);
+      const stop = new Set(['i','a','an','the','me','some','for','to','want','need','find','show','looking','recommend','please','something','can','you','do','have','with','and','my','is']);
+      const words = q.match(/[\p{L}\p{N}]+/gu)?.filter(w => !stop.has(w)) || [];
+      const ranked = catalog!.map(p => { const text = `${p.title} ${p.category} ${p.description} ${p.tags.join(' ')} ${p.stores.map(s=>s.name).join(' ')}`.toLowerCase(); return {p, score:words.filter(w=>text.includes(w)).length}; }).filter(p=>all || p.score > 0).sort((a,b)=>b.score-a.score).slice(0,4);
+      message(ranked.length ? (all ? 'Here are a few finds from the collection. Open one to explore its store options.' : 'These catalog entries match your words. Check the product details to see which fits.') : 'I could not find a matching product. Try a shorter product name or category, or browse the collection.', false, ranked.length ? ranked.map(({p})=>({title:p.title,slug:p.slug})) : [{title:'Browse all finds',slug:'/#discover'}]);
+    } catch { message('The catalog could not load. You can still browse the collection or contact us.', false, [{title:'Browse the collection',slug:'/#discover'}, ...contact()]); }
+    finally { busy = false; form.removeAttribute('aria-busy'); form.querySelector('button')!.disabled = false; }
+  }
+  form.addEventListener('submit', event => { event.preventDefault(); void answer(input.value.trim().slice(0,300)); });
+  document.querySelectorAll<HTMLButtonElement>('[data-prompt]').forEach(button=>button.addEventListener('click',()=>void answer(button.dataset.prompt || '')));
+  document.querySelector('#reset-chat')?.addEventListener('click',()=>{ if (!busy) { log.replaceChildren(); message(greeting); input.focus(); } });
+</script>

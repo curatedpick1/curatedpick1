@@ -96,18 +96,7 @@ export interface BlogPost {
   likes?: number;
 }
 
-export type NavigationTab = 'home' | 'reviews' | 'deals' | 'saved' | 'blog' | 'add-product' | 'admin-dashboard';
-
-export interface UserSignupRecord {
-  id: string;
-  name: string;
-  email: string;
-  signupDate: string;
-  role: 'admin' | 'editor' | 'user';
-  status: 'active' | 'verified' | 'pending';
-  alertsCount: number;
-  savedCount: number;
-}
+export type NavigationTab = 'home' | 'reviews' | 'deals' | 'saved' | 'blog';
 
 export interface ProductUserReview {
   id: string;
@@ -126,7 +115,6 @@ export interface UserProfile {
   email: string;
   avatarUrl?: string;
   isLoggedIn: boolean;
-  role?: 'admin' | 'editor' | 'user';
   memberSince: string;
   currency: 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD';
   notifications: {

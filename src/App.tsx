@@ -10,7 +10,6 @@ import { HeroSection } from './components/HeroSection';
 import { TrendingSection } from './components/TrendingSection';
 import { EditorsChoiceSection } from './components/EditorsChoiceSection';
 import { CategoryChips } from './components/CategoryChips';
-import { AddProductScreen } from './components/AddProductScreen';
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { PriceAlertModal } from './components/PriceAlertModal';
 import { CompareModal } from './components/CompareModal';
@@ -31,16 +30,14 @@ import { AiAssistantModal } from './components/AiAssistantModal';
 import { AiFloatingButton } from './components/AiFloatingButton';
 import { PriceTrendBadge } from './components/PriceTrendBadge';
 import { ProductShareButton } from './components/ProductShareButton';
-import { AdminDashboard } from './components/AdminDashboard';
 import {
   INITIAL_PRODUCTS,
   INITIAL_REVIEWS,
   INITIAL_DEALS,
   INITIAL_BLOGS,
-  INITIAL_USER_SIGNUPS,
 } from './data/initialData';
-import { Product, ReviewItem, DealItem, BlogPost, NavigationTab, PriceAlertConfig, UserProfile, UserSignupRecord } from './types';
-import { Sparkles, ArrowRight, Star, ShoppingCart, Tag, Filter, Heart, BellRing, Scale, AlertCircle, Lock } from 'lucide-react';
+import { Product, ReviewItem, DealItem, BlogPost, NavigationTab, PriceAlertConfig, UserProfile } from './types';
+import { Sparkles, ArrowRight, Star, ShoppingCart, Tag, Filter, Heart, BellRing, Scale, AlertCircle } from 'lucide-react';
 
 const CATEGORIES = ['Tech', 'Home', 'Fitness', 'Beauty', 'Outdoors', 'Books'];
 
@@ -168,27 +165,17 @@ export default function App() {
       const saved = localStorage.getItem('curated_pick_user_profile');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (
-          parsed.email === 'huzaifakhanhuzaifa6225@gmail.com' ||
-          parsed.email === 'curatedpick.store@gmail.com' ||
-          parsed.name === 'Huzaifa Khan'
-        ) {
-          parsed.email = 'curatedpick.store@gmail.com';
-          parsed.role = 'admin';
-          parsed.isLoggedIn = true;
-        } else if (!parsed.role) {
-          parsed.role = 'user';
-        }
+        // Local profiles are preferences, never an authorization source.
+        delete parsed.role;
         return parsed;
       }
     } catch {
       // fallback
     }
     return {
-      name: 'Huzaifa Khan',
-      email: 'curatedpick.store@gmail.com',
-      isLoggedIn: true,
-      role: 'admin',
+      name: 'Guest',
+      email: '',
+      isLoggedIn: false,
       memberSince: 'August 2026',
       currency: 'USD',
       notifications: {
@@ -197,19 +184,6 @@ export default function App() {
         reviewReplies: true,
       },
     };
-  });
-
-  // Recent user signups state with localStorage persistence
-  const [userSignups, setUserSignups] = useState<UserSignupRecord[]>(() => {
-    try {
-      const saved = localStorage.getItem('curated_pick_user_signups');
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch {
-      // fallback
-    }
-    return INITIAL_USER_SIGNUPS;
   });
 
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
@@ -221,11 +195,6 @@ export default function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
   const [userToast, setUserToast] = useState<string | null>(null);
-
-  // Admin password authentication and session verification state
-  const [isAdminSessionVerified, setIsAdminSessionVerified] = useState<boolean>(false);
-  const [adminPasswordInput, setAdminPasswordInput] = useState<string>('');
-  const [adminPasswordError, setAdminPasswordError] = useState<string | null>(null);
 
   // Ensure permanent clean light mode across all sessions
   useEffect(() => {
@@ -251,15 +220,6 @@ export default function App() {
       console.warn('Could not save user profile to localStorage', e);
     }
   }, [userProfile]);
-
-  // Sync user signups to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('curated_pick_user_signups', JSON.stringify(userSignups));
-    } catch (e) {
-      console.warn('Could not save user signups to localStorage', e);
-    }
-  }, [userSignups]);
 
   // Sync products to local storage
   useEffect(() => {
@@ -438,15 +398,6 @@ export default function App() {
     }
   };
 
-  const handleAddNewProduct = (newProdData: Omit<Product, 'id'>) => {
-    const newProduct: Product = {
-      ...newProdData,
-      id: `prod-${Date.now()}`,
-    };
-    setProducts((prev) => [newProduct, ...prev]);
-    setCurrentTab('home');
-  };
-
   const handleTrackClick = (productId: string) => {
     setProducts((prev) =>
       prev.map((p) => (p.id === productId ? { ...p, clicks: (p.clicks || 0) + 1 } : p))
@@ -463,32 +414,8 @@ export default function App() {
 
   const handleLogout = () => {
     setUserProfile((prev) => ({ ...prev, isLoggedIn: false }));
-    setIsAdminSessionVerified(false);
-    setAdminPasswordInput('');
-    setAdminPasswordError(null);
-    if (currentTab === 'admin-dashboard' || currentTab === 'add-product') {
-      setCurrentTab('home');
-    }
     setUserToast('Signed out. You are now browsing freely in Guest mode.');
     setTimeout(() => setUserToast(null), 3500);
-  };
-
-  const handleVerifyAdminPassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (adminPasswordInput === 'Mustafa@@$$##622565') {
-      setIsAdminSessionVerified(true);
-      setAdminPasswordError(null);
-      setAdminPasswordInput('');
-      setUserProfile((prev) => ({
-        ...prev,
-        role: 'admin',
-        isLoggedIn: true,
-      }));
-      setUserToast('Admin session verified successfully.');
-      setTimeout(() => setUserToast(null), 3500);
-    } else {
-      setAdminPasswordError('Invalid administrator password. Access denied.');
-    }
   };
 
   const handleOpenLogin = () => {
@@ -496,45 +423,11 @@ export default function App() {
   };
 
   const handleLoginSubmit = (updated: Partial<UserProfile>) => {
-    const roleToAssign =
-      updated.role ||
-      (updated.email === 'curatedpick.store@gmail.com' ||
-      updated.email === 'huzaifakhanhuzaifa6225@gmail.com'
-        ? 'admin'
-        : 'user');
-
     setUserProfile((prev) => ({
       ...prev,
       ...updated,
-      role: roleToAssign,
       isLoggedIn: true,
     }));
-
-    if (updated.email) {
-      setUserSignups((prev) => {
-        const exists = prev.some(
-          (u) => u.email.toLowerCase() === updated.email!.toLowerCase()
-        );
-        if (exists) return prev;
-        return [
-          {
-            id: `usr-${Date.now()}`,
-            name: updated.name || 'Community Member',
-            email: updated.email!,
-            role: roleToAssign,
-            signupDate: new Date().toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-            }),
-            status: 'verified',
-            alertsCount: 0,
-            savedCount: 0,
-          },
-          ...prev,
-        ];
-      });
-    }
 
     setIsLoginModalOpen(false);
     setUserToast(`Welcome back, ${updated.name || userProfile.name}!`);
@@ -624,16 +517,6 @@ export default function App() {
   const featuredReview =
     reviews.find((r) => r.productId === 'prod-4') || reviews[0];
 
-  // If on "Add Product" screen, render the standalone add product view
-  if (currentTab === 'add-product') {
-    return (
-      <AddProductScreen
-        onBack={() => setCurrentTab('home')}
-        onAddProduct={handleAddNewProduct}
-      />
-    );
-  }
-
   return (
     <div className="min-h-screen bg-[#f8f9ff] dark:bg-[#070e17] text-[#0b1c30] dark:text-[#e4ebf5] flex flex-col font-sans selection:bg-[#26fedc] selection:text-[#000c1b] transition-colors duration-200">
       {/* Top Header */}
@@ -645,8 +528,6 @@ export default function App() {
         onOpenDrawer={() => setIsDrawerOpen(true)}
         onOpenSearch={handleOpenSearch}
         onNavigateToSaved={() => setCurrentTab('saved')}
-        onNavigateToAddProduct={() => setCurrentTab('add-product')}
-        onNavigateToAdminDashboard={() => setCurrentTab('admin-dashboard')}
         onNavigateHome={() => {
           setCurrentTab('home');
           setSelectedCategory('All');
@@ -885,113 +766,9 @@ export default function App() {
             blogs={blogs}
             likedBlogIds={likedBlogIds}
             onToggleLikeBlog={handleToggleLikeBlog}
-            onAddBlog={(newBlog) => {
-              setBlogs((prev) => [newBlog, ...prev]);
-              setUserToast(`Published "${newBlog.title.slice(0, 30)}..."`);
-              setTimeout(() => setUserToast(null), 3500);
-            }}
-            onDeleteBlog={(blogId) => {
-              setBlogs((prev) => prev.filter((b) => b.id !== blogId));
-              setUserToast('Article removed.');
-              setTimeout(() => setUserToast(null), 3000);
-            }}
-            userProfile={userProfile}
           />
         )}
 
-        {/* Protected Admin Telemetry & Metrics Dashboard - Only displays if authenticated as 'admin' AND session is verified */}
-        {currentTab === 'admin-dashboard' && (
-          userProfile.role === 'admin' && isAdminSessionVerified ? (
-            <AdminDashboard
-              products={products}
-              priceAlerts={priceAlerts}
-              currentUser={userProfile}
-              userSignups={userSignups}
-              onNavigateHome={() => setCurrentTab('home')}
-              onNavigateToAddProduct={() => setCurrentTab('add-product')}
-              onSelectProduct={(p) => setSelectedProduct(p)}
-              onTriggerSimulatedAlert={(productId) => {
-                const prod = products.find((p) => p.id === productId);
-                if (prod) {
-                  setUserToast(`Triggered simulated price alert for ${prod.name}`);
-                  setTimeout(() => setUserToast(null), 3500);
-                }
-              }}
-              onSwitchToAdminRole={() => {
-                setUserProfile((prev) => ({
-                  ...prev,
-                  role: 'admin',
-                  isLoggedIn: true,
-                }));
-                setIsAdminSessionVerified(true);
-              }}
-              onNotify={(msg) => {
-                setUserToast(msg);
-                setTimeout(() => setUserToast(null), 3500);
-              }}
-            />
-          ) : (
-            <div className="min-h-[75vh] flex items-center justify-center p-4">
-              <div className="max-w-md w-full bg-white dark:bg-[#0c1827] rounded-2xl border border-[#c3c6ce]/60 dark:border-slate-800 shadow-xl p-6 sm:p-8 text-center animate-scaleUp">
-                <div className="w-14 h-14 rounded-2xl bg-[#000c1b] dark:bg-[#26fedc] text-[#26fedc] dark:text-[#000c1b] flex items-center justify-center mx-auto mb-4 shadow-sm">
-                  <Lock className="w-7 h-7" />
-                </div>
-
-                <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#93000a] dark:text-rose-400 bg-[#ffdad6] dark:bg-rose-950/40 px-2.5 py-1 rounded-md">
-                  Restricted Admin Area
-                </span>
-
-                <h2 className="text-xl sm:text-2xl font-extrabold text-[#000c1b] dark:text-white mt-3">
-                  Administrator Verification
-                </h2>
-                <p className="text-xs text-[#74777e] dark:text-slate-400 mt-2 leading-relaxed max-w-sm mx-auto">
-                  Please enter your administrator password to unlock the management console.
-                </p>
-
-                <form onSubmit={handleVerifyAdminPassword} className="mt-6 space-y-4">
-                  <div>
-                    <input
-                      type="password"
-                      value={adminPasswordInput}
-                      onChange={(e) => {
-                        setAdminPasswordInput(e.target.value);
-                        setAdminPasswordError(null);
-                      }}
-                      placeholder="Enter administrator password"
-                      autoComplete="current-password"
-                      className="w-full text-xs px-3.5 py-2.5 bg-[#f8f9ff] dark:bg-slate-900 border border-[#c3c6ce]/70 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#006b5b] dark:text-white"
-                    />
-                    {adminPasswordError && (
-                      <p className="text-[11px] text-[#93000a] dark:text-rose-400 font-medium text-left mt-1.5">
-                        {adminPasswordError}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2.5 pt-1">
-                    <button
-                      type="submit"
-                      className="flex-1 bg-[#000c1b] dark:bg-[#26fedc] hover:bg-[#001c3d] text-[#26fedc] dark:text-[#000c1b] font-bold text-xs py-2.5 px-4 rounded-xl transition-all cursor-pointer shadow-xs"
-                    >
-                      Unlock Dashboard
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAdminPasswordInput('');
-                        setAdminPasswordError(null);
-                        setCurrentTab('home');
-                      }}
-                      className="px-4 py-2.5 text-xs font-semibold text-[#74777e] hover:text-[#000c1b] dark:text-slate-400 dark:hover:text-white rounded-xl border border-[#c3c6ce]/60 dark:border-slate-700 transition-colors cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )
-        )}
       </main>
 
       {/* Footer */}
@@ -1004,7 +781,6 @@ export default function App() {
       <BottomNav
         currentTab={currentTab}
         savedCount={savedProductIds.length}
-        user={userProfile}
         onSelectTab={(tab) => {
           setCurrentTab(tab);
           window.scrollTo({ top: 0, behavior: 'smooth' });

@@ -6,35 +6,25 @@ import {
   User,
   ArrowRight,
   X,
-  PenSquare,
-  Trash2,
   Heart,
   Search,
   SlidersHorizontal,
   Sparkles,
 } from 'lucide-react';
-import { BlogPost, UserProfile } from '../types';
-import { CreateBlogModal } from './CreateBlogModal';
+import { BlogPost } from '../types';
 
 interface BlogViewProps {
   blogs: BlogPost[];
-  onAddBlog?: (newBlog: BlogPost) => void;
-  onDeleteBlog?: (blogId: string) => void;
   onToggleLikeBlog?: (blogId: string) => void;
   likedBlogIds?: string[];
-  userProfile?: UserProfile;
 }
 
 export const BlogView: React.FC<BlogViewProps> = ({
   blogs,
-  onAddBlog,
-  onDeleteBlog,
   onToggleLikeBlog,
   likedBlogIds,
-  userProfile,
 }) => {
   const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Search & Category Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -152,7 +142,7 @@ export const BlogView: React.FC<BlogViewProps> = ({
 
   return (
     <div className="py-6 px-4 md:px-8 max-w-5xl mx-auto">
-      {/* Header with Prominent Create Article Action */}
+      {/* Editorial header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <span className="text-xs font-bold text-[#006b5b] dark:text-[#26fedc] bg-[#26fedc]/30 dark:bg-[#26fedc]/20 px-3 py-1 rounded-full uppercase tracking-wider">
@@ -166,17 +156,6 @@ export const BlogView: React.FC<BlogViewProps> = ({
           </p>
         </div>
 
-        {onAddBlog && (
-          <button
-            id="btn-open-create-blog"
-            onClick={() => setIsCreateModalOpen(true)}
-            className="self-start sm:self-center flex items-center gap-2 bg-[#000c1b] dark:bg-[#26fedc] hover:bg-[#081a2f] dark:hover:bg-[#1de9b6] text-[#26fedc] dark:text-[#000c1b] px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-md hover:shadow-lg hover:scale-105 transition-all cursor-pointer shrink-0 border border-[#26fedc]/30 dark:border-transparent"
-            title="Create and publish a new blog article"
-          >
-            <PenSquare className="w-4 h-4 text-[#26fedc] dark:text-[#000c1b]" />
-            <span>Write New Article</span>
-          </button>
-        )}
       </div>
 
       {/* Blog Search & Category Filter Section */}
@@ -315,17 +294,8 @@ export const BlogView: React.FC<BlogViewProps> = ({
           <BookOpen className="w-12 h-12 text-[#74777e] dark:text-slate-400 mx-auto mb-3 opacity-60" />
           <h3 className="text-lg font-bold text-[#000c1b] dark:text-white">No articles published yet</h3>
           <p className="text-xs sm:text-sm text-[#43474d] dark:text-slate-300 mt-1 mb-4 max-w-md mx-auto">
-            Share product recommendations, comparison breakdowns, or buying guides with the community.
+            Check back for product recommendations, comparisons, and buying guides.
           </p>
-          {onAddBlog && (
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#26fedc] hover:bg-[#00f5d4] text-[#000c1b] font-bold rounded-xl text-xs transition-all cursor-pointer shadow-xs"
-            >
-              <PenSquare className="w-4 h-4" />
-              <span>Create First Article</span>
-            </button>
-          )}
         </div>
       ) : filteredBlogs.length === 0 ? (
         /* Empty State for Search/Filter */
@@ -344,15 +314,6 @@ export const BlogView: React.FC<BlogViewProps> = ({
               <X className="w-3.5 h-3.5" />
               <span>Clear Search & Filters</span>
             </button>
-            {onAddBlog && (
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#eff4ff] dark:bg-slate-800 hover:bg-[#e5eeff] text-[#000c1b] dark:text-white font-bold rounded-xl text-xs transition-all cursor-pointer"
-              >
-                <PenSquare className="w-3.5 h-3.5" />
-                <span>Write an Article on this</span>
-              </button>
-            )}
           </div>
         </div>
       ) : (
@@ -389,22 +350,6 @@ export const BlogView: React.FC<BlogViewProps> = ({
                     )}
                   </div>
 
-                  {onDeleteBlog && blog.id.startsWith('blog-user-') && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (window.confirm?.('Are you sure you want to delete this article?') ?? true) {
-                          onDeleteBlog(blog.id);
-                        }
-                      }}
-                      className="absolute top-3 right-3 p-1.5 bg-black/60 hover:bg-[#93000a] text-white rounded-lg backdrop-blur-xs transition-colors"
-                      title="Delete this article"
-                      aria-label="Delete article"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
                 </div>
 
                 <div className="p-4 sm:p-5">
@@ -463,19 +408,6 @@ export const BlogView: React.FC<BlogViewProps> = ({
             </article>
           ))}
         </div>
-      )}
-
-      {/* Blog Creation Modal */}
-      {onAddBlog && (
-        <CreateBlogModal
-          isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-          onSaveBlog={(newBlog) => {
-            onAddBlog(newBlog);
-            setIsCreateModalOpen(false);
-          }}
-          userProfile={userProfile}
-        />
       )}
 
       {/* Blog Article Modal */}

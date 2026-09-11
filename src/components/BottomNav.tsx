@@ -1,21 +1,18 @@
 import React from 'react';
-import { Home, Star, Tag, BookOpen, Heart, ShieldCheck } from 'lucide-react';
-import { NavigationTab, UserProfile } from '../types';
+import { Home, Star, Tag, BookOpen, Heart } from 'lucide-react';
+import { NavigationTab } from '../types';
 
 interface BottomNavProps {
   currentTab: NavigationTab;
   savedCount?: number;
-  user?: UserProfile;
   onSelectTab: (tab: NavigationTab) => void;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
   currentTab,
   savedCount = 0,
-  user,
   onSelectTab,
 }) => {
-  const isAdmin = Boolean(user?.isLoggedIn && user?.role === 'admin');
 
   return (
     <nav
@@ -103,21 +100,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <span>Guides</span>
       </button>
 
-      {/* Admin Tab (Only visible to Admin role on mobile) */}
-      {isAdmin && (
-        <button
-          id="nav-tab-admin"
-          onClick={() => onSelectTab('admin-dashboard')}
-          className={`flex flex-col items-center justify-center rounded-full px-2 py-1.5 transition-all text-[11px] font-semibold ${
-            currentTab === 'admin-dashboard' || currentTab === 'add-product'
-              ? 'bg-[#000c1b] dark:bg-[#26fedc] text-[#26fedc] dark:text-[#000c1b] shadow-xs scale-100 font-bold'
-              : 'text-[#006b5b] dark:text-[#26fedc] hover:bg-[#e5eeff] dark:hover:bg-slate-800 scale-95'
-          }`}
-        >
-          <ShieldCheck className="w-4 h-4 mb-0.5" />
-          <span>Admin</span>
-        </button>
-      )}
     </nav>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Search, Plus, Heart, ShieldCheck } from 'lucide-react';
+import { Menu, Search, Heart } from 'lucide-react';
 import { UserProfile } from '../types';
 import { UserProfileMenu } from './UserProfileMenu';
 import { CuratedPickLogo } from './CuratedPickLogo';
@@ -12,8 +12,6 @@ interface HeaderProps {
   onOpenDrawer: () => void;
   onOpenSearch: () => void;
   onNavigateToSaved?: () => void;
-  onNavigateToAddProduct: () => void;
-  onNavigateToAdminDashboard?: () => void;
   onNavigateHome: () => void;
   onOpenActivity: () => void;
   onOpenSettings: () => void;
@@ -29,15 +27,12 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenDrawer,
   onOpenSearch,
   onNavigateToSaved,
-  onNavigateToAddProduct,
-  onNavigateToAdminDashboard,
   onNavigateHome,
   onOpenActivity,
   onOpenSettings,
   onLogout,
   onLogin,
 }) => {
-  const isAdmin = user.isLoggedIn && user.role === 'admin';
 
   return (
     <header
@@ -97,21 +92,6 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        {/* Add Product Shortcut (Only visible to Admin role; small and compact) */}
-        {isAdmin && (
-          <div className="flex items-center gap-1 sm:gap-1.5">
-            <button
-              id="btn-header-add-product"
-              onClick={onNavigateToAddProduct}
-              className="flex items-center gap-1 bg-[#26fedc] hover:bg-[#1de9ca] text-[#000c1b] font-bold text-[10px] sm:text-[10.5px] px-2 py-0.5 rounded-md shadow-2xs hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
-              title="Add New Curated Product"
-            >
-              <Plus className="w-2.5 h-2.5" />
-              <span>Add</span>
-            </button>
-          </div>
-        )}
-
         {/* User Profile Menu with Avatar */}
         <UserProfileMenu
           user={user}
@@ -120,7 +100,6 @@ export const Header: React.FC<HeaderProps> = ({
           reviewsCount={reviewsCount}
           onOpenActivity={onOpenActivity}
           onOpenSettings={onOpenSettings}
-          onOpenAdminDashboard={onNavigateToAdminDashboard}
           onLogout={onLogout}
           onLogin={onLogin}
         />

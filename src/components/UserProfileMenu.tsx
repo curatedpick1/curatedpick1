@@ -21,7 +21,6 @@ interface UserProfileMenuProps {
   reviewsCount: number;
   onOpenActivity: () => void;
   onOpenSettings: () => void;
-  onOpenAdminDashboard?: () => void;
   onLogout: () => void;
   onLogin: () => void;
 }
@@ -33,7 +32,6 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
   reviewsCount,
   onOpenActivity,
   onOpenSettings,
-  onOpenAdminDashboard,
   onLogout,
   onLogin,
 }) => {
@@ -264,33 +262,6 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
               </div>
             </button>
 
-            {/* Admin Portal Item (Only visible to admin role) */}
-            {user.role === 'admin' && onOpenAdminDashboard && (
-              <button
-                id="menu-item-admin-dashboard"
-                type="button"
-                onClick={() => {
-                  setIsOpen(false);
-                  onOpenAdminDashboard();
-                }}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left bg-[#26fedc]/15 hover:bg-[#26fedc]/30 text-[#000c1b] dark:text-white transition-colors group cursor-pointer border border-[#26fedc]/30"
-              >
-                <div className="p-2 rounded-lg bg-[#000c1b] dark:bg-[#26fedc] text-[#26fedc] dark:text-[#000c1b] transition-colors">
-                  <ShieldCheck className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs sm:text-sm font-bold block">Admin Dashboard</span>
-                    <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-[#000c1b] text-[#26fedc] dark:bg-white dark:text-[#000c1b]">
-                      Admin
-                    </span>
-                  </div>
-                  <span className="text-[10.5px] text-[#006b5b] dark:text-[#26fedc] block">
-                    Product clicks, alerts & user telemetry
-                  </span>
-                </div>
-              </button>
-            )}
           </div>
 
           {/* Simulated Login / Logout Item */}

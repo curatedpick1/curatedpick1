@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.astro/
+.env
+.env.*
+!.env.example
+!.env.publisher.example
+!.env.functions.example
+.vercel/
+.wrangler/
+.private/
+supabase/.temp/
+supabase/.branches/
+test-results/

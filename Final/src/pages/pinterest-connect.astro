@@ -1,0 +1,18 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Pinterest connection — The Curated Pick" noindex><section class="prose wrap"><p class="eyebrow">OWNER CONNECTION</p><h1>Back from Pinterest.</h1><p>If you started the private connection script on your computer, copy this connection response and paste it into that waiting terminal. This page does not store tokens or sign you into the website.</p><button class="pill-button" id="copy-connection">Copy connection response</button><p class="connection-status" role="status" id="connection-status"></p><p>Did not start a connection? <a href="/">Return to the finds.</a></p></section></Layout>
+<script>
+  const responseUrl = location.href;
+  // Remove the short-lived authorization code from browser history after capturing it.
+  history.replaceState(null, '', location.pathname);
+  const status = document.querySelector('#connection-status');
+  document.querySelector('#copy-connection')?.addEventListener('click', async () => {
+    try {
+      const params = new URL(responseUrl).searchParams;
+      if (!params.has('code') || !params.has('state')) throw new Error('No connection response found. Start the connection script first.');
+      await navigator.clipboard.writeText(responseUrl);
+      if (status) status.textContent = 'Copied. Paste it into the connection script on your computer.';
+    } catch (error) { if (status) status.textContent = error instanceof Error ? error.message : 'Could not copy. Restart the connection script in a browser that supports clipboard access.'; }
+  });
+</script>

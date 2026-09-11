@@ -29,8 +29,8 @@ export const OptionalLoginModal: React.FC<OptionalLoginModalProps> = ({
   onLoginSubmit,
   onContinueGuest,
 }) => {
-  const [name, setName] = useState(currentUser.name || 'Huzaifa Khan');
-  const [email, setEmail] = useState(currentUser.email || 'curatedpick.store@gmail.com');
+  const [name, setName] = useState(currentUser.isLoggedIn ? currentUser.name : '');
+  const [email, setEmail] = useState(currentUser.email || '');
   const [activeTab, setActiveTab] = useState<'signin' | 'guest'>('signin');
   const [error, setError] = useState<string | null>(null);
 
@@ -48,37 +48,10 @@ export const OptionalLoginModal: React.FC<OptionalLoginModalProps> = ({
     }
 
     setError(null);
-    const normalizedEmail = email.trim().toLowerCase();
-    const isAdminAccount =
-      normalizedEmail === 'curatedpick.store@gmail.com' ||
-      normalizedEmail === 'huzaifakhanhuzaifa6225@gmail.com' ||
-      normalizedEmail.includes('admin');
-
     onLoginSubmit({
       name: name.trim(),
       email: email.trim(),
       isLoggedIn: true,
-      role: isAdminAccount ? 'admin' : 'user',
-    });
-    onClose();
-  };
-
-  const handleOneClickDemo = () => {
-    onLoginSubmit({
-      name: 'Huzaifa Khan',
-      email: 'curatedpick.store@gmail.com',
-      isLoggedIn: true,
-      role: 'admin',
-    });
-    onClose();
-  };
-
-  const handleStandardUserDemo = () => {
-    onLoginSubmit({
-      name: 'Alex Rivera',
-      email: 'alex.r92@gmail.com',
-      isLoggedIn: true,
-      role: 'user',
     });
     onClose();
   };
@@ -110,10 +83,10 @@ export const OptionalLoginModal: React.FC<OptionalLoginModalProps> = ({
               id="login-modal-title"
               className="text-lg sm:text-xl font-extrabold text-[#000c1b] tracking-tight"
             >
-              Account & Guest Access
+              Local Profile & Guest Access
             </h2>
             <p className="text-xs sm:text-sm text-[#43474d] mt-1 leading-relaxed">
-              You are never forced to log in. You have full, unrestricted access to all curated reviews, deals, wishlists, and price alerts with or without an account.
+              Your profile and preferences are saved only in this browser. This does not create an online account or sync across devices.
             </p>
           </div>
 
@@ -140,7 +113,7 @@ export const OptionalLoginModal: React.FC<OptionalLoginModalProps> = ({
             }`}
           >
             <LogIn className="w-4 h-4" />
-            <span>Sign In / Profile</span>
+            <span>Local Profile</span>
           </button>
 
           <button
@@ -207,42 +180,6 @@ export const OptionalLoginModal: React.FC<OptionalLoginModalProps> = ({
           ) : (
             /* Sign In / Personalize Tab */
             <div className="space-y-4">
-              <div className="p-3.5 bg-gradient-to-r from-[#26fedc]/15 to-[#eff4ff] rounded-2xl border border-[#26fedc]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                <div>
-                  <h4 className="text-xs font-bold text-[#000c1b]">
-                    Quick 1-Click Role Logins
-                  </h4>
-                  <p className="text-[11px] text-[#43474d]">
-                    Test the app as Admin (reveals admin dashboard) or Regular User (hides admin).
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={handleOneClickDemo}
-                    className="py-1 px-2.5 bg-[#000c1b] hover:bg-[#006b5b] text-[#26fedc] font-bold text-[11px] rounded-lg transition-colors cursor-pointer shadow-2xs"
-                    title="Sign in with full administrative privileges"
-                  >
-                    Admin Mode
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleStandardUserDemo}
-                    className="py-1 px-2 bg-white hover:bg-slate-100 text-[#43474d] font-semibold text-[11px] rounded-lg border border-[#c3c6ce]/60 transition-colors cursor-pointer"
-                    title="Sign in as normal customer (admin hidden)"
-                  >
-                    User Mode
-                  </button>
-                </div>
-              </div>
-
-              <div className="relative flex items-center justify-center">
-                <div className="border-t border-[#c3c6ce]/30 w-full" />
-                <span className="bg-white px-3 text-[11px] font-semibold text-[#74777e] uppercase tracking-wider shrink-0">
-                  Or enter your details
-                </span>
-              </div>
-
               <form onSubmit={handleSubmit} className="space-y-3.5">
                 {error && (
                   <div className="p-2.5 bg-[#ffdad6]/60 border border-[#ba1a1a]/30 rounded-xl text-xs text-[#ba1a1a] font-medium">
@@ -301,7 +238,7 @@ export const OptionalLoginModal: React.FC<OptionalLoginModalProps> = ({
                     className="flex-1 py-3 px-4 bg-[#000c1b] hover:bg-[#006b5b] text-[#26fedc] font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <LogIn className="w-4 h-4" />
-                    <span>Sign In</span>
+                    <span>Save Profile</span>
                   </button>
 
                   <button
