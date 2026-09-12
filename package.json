@@ -7,6 +7,7 @@
     "node": "24.x"
   },
   "scripts": {
+    "studio": "node scripts/studio.mjs",
     "dev": "astro dev --host 127.0.0.1 --port 4321",
     "build": "astro check && astro build",
     "build:demo": "node scripts/build-demo.mjs",

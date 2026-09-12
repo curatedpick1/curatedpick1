@@ -10,6 +10,8 @@ The floating Curated assistant searches `/assistant-catalog.json`, generated fro
 
 **Start with [SETUP.md](SETUP.md)** for the complete Supabase → hosting → Pinterest setup.
 
+**Want a private product form on your computer?** Run `npm run studio` and open http://127.0.0.1:4333. Follow [LOCAL-STUDIO.md](LOCAL-STUDIO.md) to enable your login and give friends their own editor accounts. This local app connects to the same Supabase catalog and is separate from the public storefront.
+
 ## Preview on your computer
 
 Use Node.js 24. In a terminal:

@@ -1,5 +1,7 @@
 # Complete setup: follow these steps in order
 
+**Using the local form on your PC or a friend's PC?** After steps 1–4, follow [LOCAL-STUDIO.md](LOCAL-STUDIO.md). It replaces manual product entry in steps 5 and 10. The owner still completes steps 6–9 once to enable automatic website updates and Pinterest posting.
+
 The daily workflow after setup is: **upload your media → add one product row in Supabase → publish → website updates → Pinterest posts**. Media upload and store URLs are inputs; the title and description are entered once.
 
 This project is ready to configure, not already connected or deployed. Do not post passwords or private keys into chat. Put each key only in the location specified below.

@@ -6,6 +6,7 @@ dist/
 !.env.example
 !.env.publisher.example
 !.env.functions.example
+!.env.studio.example
 .vercel/
 .wrangler/
 .private/
