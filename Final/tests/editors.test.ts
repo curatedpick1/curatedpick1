@@ -1,0 +1,46 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { PGlite } from '@electric-sql/pglite';
+test('local editors have bounded product/media access; outsiders and removed editors cannot write or read tokens', async()=>{
+  const db=new PGlite();
+  const editor='11111111-1111-4111-8111-111111111111';
+  const stranger='22222222-2222-4222-8222-222222222222';
+  try {
+    await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;
+      grant usage on schema public to anon,authenticated,service_role;
+      create schema auth;create table auth.users(id uuid primary key);
+      create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+      create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+      create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);
+      alter table storage.objects enable row level security;
+      grant usage on schema storage to anon,authenticated;grant all on storage.objects to anon,authenticated;
+      insert into auth.users values ('${editor}'),('${stranger}');`);
+    for(const name of ['202609080001_catalog.sql','202609080002_storage.sql','202609130003_local_editors.sql','202609130003_local_editors.sql'])await db.exec(await readFile(new URL(`../supabase/migrations/${name}`,import.meta.url),'utf8'));
+    await db.query('insert into catalog_editors(user_id) values ($1)',[editor]);
+    await db.exec(`set role authenticated;set request.jwt.claim.sub='${stranger}'`);
+    assert.equal((await db.query('select * from products')).rows.length,0);
+    await assert.rejects(()=>db.query("insert into products(title) values ('intruder')"),/row-level security/);
+    await assert.rejects(()=>db.query('select get_editor_status()'),/Editor access required/);
+    await assert.rejects(()=>db.query('insert into catalog_editors(user_id) values ($1)',[stranger]),/permission denied/);
+    await assert.rejects(()=>db.query("insert into storage.objects(bucket_id,name) values ('product-videos','stolen.mp4')"),/row-level security/);
+    await db.exec(`set request.jwt.claim.sub='${editor}'`);
+    const product=(await db.query<{id:string;revision:number}>("insert into products(title) values ('Local studio draft') returning id,revision")).rows[0];
+    assert.equal(product.revision,1);
+    const valid=JSON.stringify([{name:'Amazon',url:'https://amazon.com/dp/TEST?tag=example-20'}]);
+    await db.query("update products set published=true,description='Description',poster_url='https://images.example.com/a.jpg',poster_alt='Poster',stores=$1::jsonb,pinterest_board_id='123',publish_to_pinterest=true where id=$2",[valid,product.id]);
+    assert.equal((await db.query<{get_editor_status:{jobs:unknown[]}}>('select get_editor_status()')).rows[0].get_editor_status.jobs.length,1);
+    for(const table of ['catalog_editors','pinterest_tokens','pinterest_jobs','catalog_state'])await assert.rejects(()=>db.query(`select * from ${table}`),/permission denied/);
+    await assert.rejects(()=>db.query('update products set revision=1'),/permission denied/);
+    await assert.rejects(()=>db.query('delete from products'),/permission denied/);
+    // Optimistic editing sees zero rows if a friend has already updated this revision.
+    assert.equal((await db.query("update products set title='Stale' where id=$1 and revision=$2 returning id",[product.id,product.revision])).rows.length,0);
+    await db.query("insert into storage.objects(bucket_id,name) values ('product-videos',$1)",[editor+'/clip.mp4']);
+    await assert.rejects(()=>db.query("insert into storage.objects(bucket_id,name) values ('product-videos',$1)",[stranger+'/clip.mp4']),/row-level security/);
+    await db.exec('reset role');await db.query('delete from catalog_editors where user_id=$1',[editor]);
+    await db.exec(`set role authenticated;set request.jwt.claim.sub='${editor}'`);
+    assert.equal((await db.query('select * from products')).rows.length,0);
+    assert.equal((await db.query('select * from storage.objects')).rows.length,0);
+    await assert.rejects(()=>db.query("insert into products(title) values ('revoked')"),/row-level security/);
+  } finally {await db.close();}
+});

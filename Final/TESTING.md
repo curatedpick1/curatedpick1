@@ -32,6 +32,8 @@ The interactive pass additionally checks scroll reveal activation, reduced-motio
 
 ## Checks that need your connected accounts
 
+Local Studio adds a PostgreSQL permission test for allowlisted editors, blocked ordinary accounts, media paths, protected tokens, immediate revocation, repeated migration application, and stale-revision rejection. Browser checks use mocked Supabase requests for login denial/success, image/video uploads, multiple stores, draft/published saves, queue status, concurrent-edit conflicts, logout, and narrow-screen layout. No real products or accounts were created by those checks. Run the new migration and verify an approved and an unapproved real account before giving collaborators access.
+
 Local mocks do not prove a live integration. After setup, verify:
 
 1. Supabase migrations, Storage policies, and public snapshot access against your hosted project.
