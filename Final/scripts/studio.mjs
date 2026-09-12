@@ -17,6 +17,7 @@ const publicConfig = {
 const routes = new Map([
   ['/', ['studio/index.html','text/html; charset=utf-8']],
   ['/app.js', ['studio/app.js','text/javascript; charset=utf-8']],
+  ['/drafts.js', ['studio/drafts.js','text/javascript; charset=utf-8']],
   ['/style.css', ['studio/style.css','text/css; charset=utf-8']],
   ['/logo.svg', ['public/favicon.svg','image/svg+xml']],
   ['/font.woff2', ['node_modules/@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2','font/woff2']],
