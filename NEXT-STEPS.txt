@@ -23,22 +23,23 @@ WHAT YOU ARE SETTING UP
 
 1. START YOUR LOCAL FORM
 -----------------------
-On your Windows PC, open PowerShell and run:
+Install Node.js 24 once, if it is not installed yet.
+Open C:\Users\Stymite\Desktop\Curated\Final in File Explorer.
+Double-click Start Studio.cmd.
 
-cd C:\Users\Stymite\Desktop\Curated\Final
-npm ci
-npm run studio
-
-Use Node.js 24. npm ci needs internet only when installing dependencies.
-If dependencies are already installed, you can skip npm ci.
+It installs dependencies on the first launch if needed (internet required once),
+starts the local server in the background, and opens your browser.
+Next time, just double-click the same file. No commands to type.
 
 Open this address in your browser:
 http://127.0.0.1:4333
 
-Keep the terminal open. If it says Studio is already running, just open the URL.
-If you had an older Studio server open, stop it with Ctrl+C, then run it again.
+The server keeps running in the background until it stops or you restart the PC.
+Opening the launcher again reuses it. Closing the browser does not stop it.
+If you have the OLD terminal-based server open, stop it with Ctrl+C once before
+using the new launcher.
 
-Click "Work on local drafts".
+The product form opens immediately. No password is needed for offline drafts.
 Fill anything you want and click "Save on this PC".
 You can close the browser and open that draft later under "On this PC".
 
@@ -63,14 +64,16 @@ e) Click Run. This SQL can be rerun if you already applied this editor migration
 Now create your editor account:
 
 f) Open Authentication -> Users -> Add user -> Create new user.
-g) Enter your email and a strong password. Use the option to confirm the email.
-   This is a new APP login. It is not your Supabase dashboard password.
+g) Enter your email and set the editor password you chose. Confirm the email.
+   This is a new APP account. The password is checked by Supabase, not hardcoded
+   in the local app. No display name is needed.
 h) Copy the new user's ID (the long UUID).
 i) Open Table Editor -> catalog_editors -> Insert row.
-j) Paste the UUID into user_id. Put your name in label. Save.
+j) Paste the UUID into user_id. Leave label blank. Save.
 
-In the local app, click "Sign in to publish".
-Open Connection settings and enter:
+In the local app, click "Unlock publishing".
+Open "One-time settings". Enter the editor account email you just created,
+then enter:
 
 Supabase project URL:
 https://hrwjogpklvgdvljrhptw.supabase.co
@@ -81,9 +84,11 @@ Copy your sb_publishable_... key from Supabase API Keys.
 Public website URL:
 https://curatedpick1.pages.dev
 
-Sign in using the APP email and password you just created.
-Your existing local form is preserved when you sign in.
-Only the public key belongs in this form. No secret/service-role key.
+Click Save settings. It closes the settings section.
+Now enter only the editor password and click Unlock.
+Future visits ask for the password only; the email is remembered in this browser.
+Your local form is preserved. Reloading the page locks publishing again.
+Only the publishable key belongs in settings. No secret/service-role key.
 
 
 3. CHECK ONE PRODUCT BEFORE AUTOMATION
@@ -91,8 +96,8 @@ Only the public key belongs in this form. No secret/service-role key.
 a) Add a title, description, category and tags.
 b) Choose a website poster and describe the image.
 c) Add your matching Amazon/AliExpress/other affiliate links under Where to buy.
-d) Leave "Queue a Pin when published" OFF for this first check.
-e) Click "Save to Supabase draft".
+d) Turn "Post to Pinterest" OFF for this first check.
+e) Open "More actions & publishing status", then click "Save to Supabase draft".
 f) Confirm the product appears in Supabase -> Table Editor -> products.
 
 That proves the form, login, uploads and database work together.
@@ -109,7 +114,8 @@ b) Find Builds & deployments -> Deploy hooks.
 c) Create a hook called "Supabase catalog", using branch main.
 d) Copy the private hook URL. If you already made one in old step 4, use it.
 
-Keep the Studio terminal running. Open a SECOND PowerShell terminal:
+Open PowerShell for this one-time backend setup. The daily form launcher does
+not require these commands again:
 
 cd C:\Users\Stymite\Desktop\Curated\Final
 npx supabase login
@@ -243,7 +249,7 @@ PINTEREST_REDIRECT_URI=https://curatedpick1.pages.dev/pinterest-connect/
 PINTEREST_API_ENV=sandbox
 PUBLISHER_SECRET=PASTE_THE_SAME_GENERATED_SECRET
 
-Save it. In the second terminal, run:
+Save it. In your setup PowerShell terminal, run:
 
 npm run pinterest:connect
 
@@ -272,11 +278,11 @@ In Studio:
 - Open one complete test product.
 - Select Image Pin, or Video Pin with an actual video and JPG/PNG cover.
 - Enter the numeric board ID from the terminal.
-- Check "Queue a Pin when published".
+- Check "Post to Pinterest".
 - Click Publish product / Save published changes.
 
 The publisher first updates and verifies the website, then sends the Pin.
-Use Refresh status in Studio. A video can need several scheduled runs.
+Use Refresh in Studio; detailed status is under More actions & publishing status. A video can need several scheduled runs.
 Check pinterest_jobs.last_error in Supabase if the job fails.
 
 Trial/sandbox Pins are testing content, visible only to their creator.
@@ -324,7 +330,7 @@ npx supabase secrets set --env-file .env.functions
 
 g) In Studio, update queued products to use the production board ID.
    For the simplest first public test, create a NEW product, use that board ID,
-   check Queue a Pin, then publish it. Existing sandbox test jobs are not
+   check Post to Pinterest, then publish it. Existing sandbox test jobs are not
    automatically reposted as public Pins.
 
 h) Set PINTEREST_PUBLISHING_ENABLED=true in .env.functions. Save and run:
@@ -363,10 +369,14 @@ e) They run:
 npm ci
 npm run studio
 
-f) They open http://127.0.0.1:4333 on THEIR computer.
-g) They can use Work on local drafts without a login.
-h) For uploads, they enter the same public connection settings from step 2,
-   then use THEIR editor email/password.
+f) For daily use, they open Start Studio.sh. If their file manager opens it as
+   text, enable Properties -> Permissions -> Allow executing as a program, then
+   choose Run / Run in Terminal. Linux file managers vary; once configured,
+   they do not need to type commands each time.
+g) The launcher opens http://127.0.0.1:4333 and runs the server in the background.
+   The form opens without a password for local drafts.
+h) For publishing, they enter the public connection settings and THEIR editor
+   email once, click Save settings, then unlock with THEIR password.
 
 You both see shared Supabase products after signing in and refreshing.
 Local drafts stay on the PC/browser where they were saved.
@@ -375,12 +385,13 @@ Both editors queue Pins for the ONE Pinterest account you connected.
 
 YOUR DAILY ROUTINE AFTER SETUP
 --------------------------------
-1) Run npm run studio and open http://127.0.0.1:4333.
+1) Double-click Start Studio.cmd (Windows) or run Start Studio.sh (Linux).
 2) Write the product once. Choose photos/video. Add matching affiliate links.
 3) Use Save on this PC for unfinished/offline work.
-4) When online and ready, sign in, choose the board, check Queue a Pin, publish.
+4) When online and ready, unlock with your password, choose the board, and publish.
+   Post to Pinterest starts checked. Your last entered board ID is remembered.
 5) Supabase -> automatic Cloudflare rebuild -> verified product page -> Pin.
-6) Refresh status to check progress. Reconnecting alone does not publish drafts.
+6) Click Refresh to check progress. Reconnecting alone does not publish drafts.
 
 Changing the website poster later does not replace an existing Pin.
 Prices are omitted; this app does not fetch real-time merchant prices.

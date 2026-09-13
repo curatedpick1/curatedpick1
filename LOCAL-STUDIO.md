@@ -17,9 +17,9 @@ This creates `catalog_editors` and grants approved users product editing and med
 1. In Supabase, open **Authentication → Users → Add user → Create new user**.
 2. Create a user with an email and strong password. Confirm the email via the dashboard option if available; this account is for the publishing tool, not your Supabase dashboard login.
 3. Copy that user's UUID.
-4. In **Table Editor → catalog_editors**, add a row with `user_id` set to that UUID and `label` set to a name such as `Owner`. Leave the date at its default.
+4. In **Table Editor → catalog_editors**, add a row with `user_id` set to that UUID. Leave `label` blank and the date at its default. No display name is needed.
 
-Repeat with a separate account/UUID for each friend. Share each person's credentials privately and let them choose their own password using your chosen account management process. Never distribute your Supabase owner login, service-role key, or Pinterest app secret. Deleting a person's `catalog_editors` row immediately removes their database editing rights, including for an already signed-in session.
+Set your chosen editor password in Supabase when creating the account; the local app does not embed a shared password. Repeat with a separate account/UUID for each friend. Share each person's credentials privately and let them choose their own password using your chosen account management process. Never distribute your Supabase owner login, service-role key, or Pinterest app secret. Deleting a person's `catalog_editors` row immediately removes their database editing rights, including for an already signed-in session.
 
 ## 3. Run it on your PC
 
@@ -31,15 +31,15 @@ npm ci
 npm run studio
 ```
 
-Open **http://127.0.0.1:4333**. Keep the terminal open while using the app.
+Daily shortcut: double-click **Start Studio.cmd** on Windows. It installs missing dependencies on first launch, starts the server in the background, and opens **http://127.0.0.1:4333**. Reopening it reuses the running server. You do not need to keep a terminal open. If using the manual `npm run studio` command instead, keep its terminal open.
 
-On Linux, open a terminal in the project folder and run the same `npm ci` and `npm run studio` commands. Install dependencies once while online; after that, `npm run studio` starts without internet. You still need the local server running to open the form.
+On Linux, run **Start Studio.sh**. Your file manager may require Properties → Permissions → Allow executing as a program, then Run / Run in Terminal. It starts the server and opens the browser, installing missing dependencies on first launch. The manual `npm ci` / `npm run studio` commands also work. Install dependencies once while online; afterward the local server can start without internet.
 
-Click **Work on local drafts** to start immediately, without Supabase setup. Use **Save on this PC** before closing the tab. Your draft appears under **On this PC**, ready to reopen later. This saves the selected image/video bytes too, so the original file does not need to stay in its original folder. Incomplete forms can be saved locally.
+The product form opens immediately, without a password or Supabase setup. Use **Save on this PC** before closing the tab. Your draft appears under **On this PC**, ready to reopen later. This saves the selected image/video bytes too, so the original file does not need to stay in its original folder. Incomplete forms can be saved locally.
 
 Use the same browser profile and the exact `http://127.0.0.1:4333` address each time. Drafts live in that browser's IndexedDB, not in your source folder or Supabase. Your friend cannot see them yet. Clearing browser site data, using a private window, or losing that browser profile can remove local drafts. Files referenced only by an online URL are not downloaded for offline use; choose local files for offline previews.
 
-Open **Connection settings** on the login card and enter:
+Click **Unlock publishing**, open **One-time settings**, and enter your editor email once, along with:
 
 | Setting | Your value |
 | --- | --- |
@@ -47,7 +47,7 @@ Open **Connection settings** on the login card and enter:
 | Publishable key | The same `sb_publishable_...` key used in Cloudflare |
 | Public website URL | `https://curatedpick1.pages.dev` (confirm this matches the deployed site) |
 
-Sign in with the editor account from step 2. These three public settings are remembered in your browser. Passwords and auth tokens are not stored by the app; a reload requires signing in again to access Supabase. Local drafts still open without signing in. Your browser's password manager is separate. Anyone using this same browser profile can open its local drafts.
+Click **Save settings**. Daily unlocking now asks for only your editor password; the account email and public connection settings are remembered in your browser. Passwords and auth tokens are not stored by the app; a reload requires signing in again to access Supabase. Local drafts still open without signing in. Your browser's password manager is separate. Anyone using this same browser profile can open its local drafts.
 
 Optionally copy [.env.studio.example](.env.studio.example) to `.env.studio` and fill those same public defaults. The server also reads public defaults from `.env` and `.env.example` if present. `.env.studio` is ignored by Git. No private backend key is needed by the local app.
 
@@ -62,11 +62,13 @@ They install Node.js 24, run `npm ci`, then `npm run studio`, open the same loca
 1. Click **New product** and enter title, description, category, and tags.
 2. Choose a website poster and describe the image. Selecting a file keeps it in the form; it does not upload anything yet.
 3. Add the matching store names and your full affiliate URLs.
-4. Choose image/video, supply a board ID, and check **Queue a Pin when published** if desired. Choose a video and optional separate cover for a video Pin. Website images can be JPG/PNG/WebP; Pinterest covers should be JPG/PNG.
+4. Choose image/video, supply a board ID, and check **Post to Pinterest** if desired. Choose a video and optional separate cover for a video Pin. Website images can be JPG/PNG/WebP; Pinterest covers should be JPG/PNG.
 5. **Save on this PC** saves an offline draft with its selected files. **Save to Supabase draft** uploads files and creates a shared draft, keeping it off the public website. **Publish product** uploads files, saves the product as public in Supabase, and queues its Pin if selected. If you are signed out, your draft is saved locally first and the sign-in form opens. After signing in, click the desired save/publish button again. Reconnecting to the internet does not publish anything automatically.
 6. Copy the generated permanent URL. It becomes reachable after Cloudflare rebuilds.
 
-Status distinguishes draft/published database rows from a verified website deployment and actual Pinterest job states. “Credentials saved” does not prove the scheduled publisher is running or that Pinterest has granted production access. Refresh status to see current progress. No automatic retry is offered for uncertain Pin submissions; use the recovery guidance in [OPERATIONS.md](OPERATIONS.md).
+The main form shows title, description, Pin format/board, poster, image description, video when selected, and affiliate links. Category/tags, media URLs and homepage featuring are under **Optional details & existing media**. Shared drafts, deletion and detailed publishing status are under **More actions & publishing status**. The last board ID entered is remembered for new products.
+
+Status distinguishes draft/published database rows from a verified website deployment and actual Pinterest job states. “Credentials saved” does not prove the scheduled publisher is running or that Pinterest has granted production access. Click **Refresh** to see current progress. No automatic retry is offered for uncertain Pin submissions; use the recovery guidance in [OPERATIONS.md](OPERATIONS.md).
 
 Before an online save, the app saves a local recovery draft. A successful save removes that local draft. A failed upload/save keeps it for retry, including local file copies. A lost response on a new product save is recovered using the same product ID, even after reopening the browser; it does not create a second product. If that product already exists, it opens the saved version and keeps your local draft for comparing any newer edits. Review those edits before deleting the local draft. Conflicting edits from another browser tab or another editor are rejected, preserving the current form.
 
