@@ -4,7 +4,7 @@ const form = $('product-form');
 const field = name => form.elements.namedItem(name);
 let connection, session, products = [], status, selected, createId, dirty = false, busy = false, offset = 0;
 const pageSize = 100;
-let localDrafts=[], localVersion=0, draftProject=null, pendingMedia={}, previewUrl, hasForm=false;
+let localDrafts=[], localVersion=0, draftProject=null, pendingMedia={}, previewUrl, hasForm=false, lastBoard='';
 function tell(text, error = false, login = false) {const node = $(login ? 'login-status' : 'notice');node.textContent=text;node.classList.toggle('error',error);}
 function safeUrl(value) {const url=new URL(value);if(url.protocol!=='https:' || url.username || url.password || /\s/.test(value))throw new Error('Use a full HTTPS URL.');return url;}
 function readConnection() {
@@ -13,7 +13,8 @@ function readConnection() {
   const key=$('public-key').value.trim();if(!key.startsWith('sb_publishable_'))throw new Error('Use the sb_publishable_ key. Secret/service-role keys do not belong in this app.');
   const site=safeUrl($('site-url').value.trim());
   if(site.pathname!=='/' || site.search || site.hash)throw new Error('Website URL should be only the origin, for example https://curatedpick1.pages.dev');
-  return {supabaseUrl:url.origin,publishableKey:key,siteUrl:site.origin};
+  const editorEmail=$('email').value.trim();if(!editorEmail || !$('email').validity.valid){$('connection').open=true;throw new Error('Add your Supabase editor email once in settings.');}
+  return {supabaseUrl:url.origin,publishableKey:key,siteUrl:site.origin,editorEmail};
 }
 async function request(path, options={}, auth=true) {
   if(auth) {
@@ -46,20 +47,20 @@ function storeRow(store={}) {
   const row=document.createElement('div');row.className='store-row';
   for(const [key,label,type,max] of [['name','Store name','text',40],['url','Affiliate URL','url',2048],['note','Optional note','text',120]]) {
     const wrap=document.createElement('label');wrap.textContent=label;if(key==='note')wrap.className='store-note';
-    const input=document.createElement('input');input.type=type;input.maxLength=max;input.dataset.store=key;input.value=store[key] || '';input.placeholder=key==='name'?'Amazon':key==='url'?'https://…':'Variant, shipping, or a useful detail';wrap.append(input);row.append(wrap);
+    const input=document.createElement('input');input.type=type;input.maxLength=max;input.dataset.store=key;input.value=store[key] || '';input.placeholder=key==='name'?'Amazon':key==='url'?'https://…':'Variant, shipping, or a useful detail';wrap.append(input);if(key==='note')wrap.hidden=true;row.append(wrap);
   }
   const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label','Remove store');remove.addEventListener('click',()=>{row.remove();dirty=true;});row.append(remove);$('stores').append(row);
 }
 function fill(product, draft) {
   hasForm=true;selected=product;createId=draft?.id || crypto.randomUUID();localVersion=draft?.version || 0;draftProject=draft?.project || (product?connection.supabaseUrl:null);pendingMedia=structuredClone(draft?.media || {});form.reset();$('stores').replaceChildren();
-  const source=draft?.values || product || {title:'',description:'',category:'Home & living',tags:[],stores:[],pin_media_type:'image'};
+  const source=draft?.values || product || {title:'',description:'',category:'Home & living',tags:[],stores:[],pin_media_type:'image',publish_to_pinterest:true,pinterest_board_id:lastBoard};
   for(const name of ['title','description','category','poster_url','poster_alt','pin_media_type','pinterest_board_id','pin_image_url','video_path'])field(name).value=source[name] || '';
   field('tags').value=(source.tags || []).join(', ');
   for(const name of ['featured','publish_to_pinterest'])field(name).checked=!!source[name];
   (source.stores.length?source.stores:[{}]).forEach(storeRow);
-  $('editor-label').textContent=draft?'LOCAL DRAFT':product?'EDIT PRODUCT':'NEW PRODUCT';$('editor-title').textContent=source.title || 'What did you find?';
+  $('editor-label').textContent=draft?'LOCAL DRAFT':product?'EDIT PRODUCT':'NEW PRODUCT';$('editor-title').textContent=source.title || 'New product';
   $('save-draft').textContent=product?.published?'Unpublish to Supabase draft':'Save to Supabase draft';$('publish').textContent=product?.published?'Save published changes ↗':'Publish product ↗';
-  $('save-hint').textContent=product?.published?'Save on this PC keeps edits private. Saving published changes queues a website update. Existing Pins are not reposted.':'Save on this PC works offline. Publish when everything looks right.';
+  $('save-hint').textContent=product?.published?'Existing Pins are not reposted.':'Drafts stay on this PC. Publishing needs internet.';
   $('saved-links').hidden=!product;
   if(product){const url=`${draft?.siteUrl || connection.siteUrl}/products/${product.slug}/`;$('product-url').value=url;$('view-product').href=url;}
   $('video-fields').hidden=source.pin_media_type!=='video';updatePreview();dirty=false;renderList();renderJob();renderMedia();renderLocalList();
@@ -84,14 +85,14 @@ async function refresh(reset=true) {
   renderList();renderJob();
 }
 $('login-form').addEventListener('submit',event=>{event.preventDefault();void locked(async()=>{
-  connection=readConnection();tell('Signing in…',false,true);
-  const data=await request('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:$('email').value.trim(),password:$('password').value})},false);
+  connection=readConnection();if(!$('password').value)throw new Error('Enter your editor password.');tell('Unlocking…',false,true);
+  const data=await request('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:connection.editorEmail,password:$('password').value})},false);
   session={...data,deadline:Date.now()+data.expires_in*1000};$('password').value='';
   try {await refresh();} catch(error) {session=null;throw new Error(`Signed in, but editor access is unavailable. Run migration 003 and add this user to catalog_editors. ${error.message}`);}
   try{localStorage.setItem('curated-studio-connection',JSON.stringify(connection));}catch{}
-  await refreshLocal();showWorkspace();if(!hasForm)fill();tell('Connected. Your form is preserved. Click Publish product when you are ready.');
+  $('connection').open=false;await refreshLocal();showWorkspace();if(!hasForm)fill();tell('Publishing unlocked. Your draft is ready.');
 },true);});
-$('logout').addEventListener('click',()=>void locked(async()=>{if(hasForm)await saveLocal(false);try{await request('/auth/v1/logout',{method:'POST'});}catch{}session=null;products=[];status=null;showWorkspace();renderList();renderJob();tell('Signed out. Your current draft is saved on this PC.');}));
+$('logout').addEventListener('click',()=>void locked(async()=>{if(dirty || localVersion || selected)await saveLocal(false);try{await request('/auth/v1/logout',{method:'POST'});}catch{}session=null;products=[];status=null;showWorkspace();renderList();renderJob();tell('Publishing locked. Local drafts are still available.');}));
 $('new-product').addEventListener('click',()=>{if(allowDiscard()){fill();tell('');field('title').focus();}});
 $('library-search').addEventListener('input',renderList);
 $('refresh').addEventListener('click',()=>void locked(async()=>{await refresh();tell('Status refreshed. Your unsaved form edits are preserved.');}));
@@ -100,6 +101,7 @@ $('add-store').addEventListener('click',()=>{if($('stores').children.length>=8){
 form.addEventListener('input',()=>{dirty=true;});
 for(const target of ['poster_url','pin_image_url','video_path'])field(target).addEventListener('input',()=>{delete pendingMedia[target];renderMedia();updatePreview();});
 field('pin_media_type').addEventListener('change',()=>{$('video-fields').hidden=field('pin_media_type').value!=='video';});
+field('pinterest_board_id').addEventListener('change',()=>{const board=field('pinterest_board_id').value.trim();if(/^\d+$/.test(board)){lastBoard=board;try{localStorage.setItem('curated-studio-board',board);}catch{}}});
 function stageMedia(input,target,video=false) {
   const file=input.files[0];if(!file)return;
   const types=video?{'video/mp4':'mp4','video/quicktime':'mov','video/x-m4v':'m4v'}:{'image/jpeg':'jpg','image/png':'png',...(target==='poster_url'?{'image/webp':'webp'}:{})};
@@ -115,7 +117,7 @@ function payload(published,validate=true) {
   if(!validate)return values;
   if(!values.title)throw new Error('Give your product a title.');
   if(values.tags.length>12 || values.tags.some(t=>t.length>40))throw new Error('Use up to 12 tags, with at most 40 characters each.');
-  if(values.publish_to_pinterest && !/^\d+$/.test(values.pinterest_board_id || ''))throw new Error('Add a numeric Pinterest board ID, or turn off “Queue a Pin” for now.');
+  if(values.publish_to_pinterest && !/^\d+$/.test(values.pinterest_board_id || ''))throw new Error('Add your Pinterest board ID, or turn off “Post to Pinterest” for now.');
   for(const s of values.stores){if(!s.name)throw new Error('Add a name for every store.');safeUrl(s.url);}
   if(values.pin_image_url && !pendingMedia.pin_image_url)safeUrl(values.pin_image_url);
   if(published){if(!values.description || !values.poster_alt || !values.stores.length)throw new Error('Publishing needs a description, image description, and at least one store link.');if(!pendingMedia.poster_url)safeUrl(values.poster_url);if(values.publish_to_pinterest && values.pin_media_type==='video' && !values.video_path && !pendingMedia.video_path)throw new Error('Select your video before publishing a video Pin.');}
@@ -158,14 +160,14 @@ $('copy-url').addEventListener('click',()=>void locked(async()=>{try{await navig
 window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
 function showWorkspace() {
   $('login-view').hidden=true;$('workspace').hidden=false;$('logout').hidden=!session;$('connect-online').hidden=!!session;
-  $('signed-in').textContent=session?.user.email || 'Local drafts · Save your work here, sign in to publish.';
+  $('signed-in').textContent=session?'Publishing unlocked':'Draft offline. Unlock to publish.';
   $('connection-state').textContent=session?'Signed in as editor':'Local drafts only';
   $('refresh').hidden=!session;
   if(!session){$('site-state').textContent='Sign in to check';$('pin-state').textContent='Sign in to check';$('load-more').hidden=true;}
 }
 function openLogin() {
   $('workspace').hidden=true;$('login-view').hidden=false;$('connect-online').hidden=true;
-  tell('Your draft is saved on this PC. Sign in, then click Publish again to send it.',false,true);
+  tell(localVersion?'Draft saved. Unlock, then click Publish again.':'Enter your password to publish.',false,true);$('password').focus();
 }
 function renderMedia() {
   for(const [id,target] of [['poster-file','poster_url'],['cover-file','pin_image_url'],['video-file','video_path']]) {
@@ -187,13 +189,16 @@ async function saveLocal(announce=true) {
   if(announce)tell('Saved on this PC, including selected files. Nothing was sent to Supabase or Pinterest.');
 }
 $('work-local').addEventListener('click',()=>void locked(async()=>{showWorkspace();if(!hasForm)fill();await refreshLocal();tell('Ready to work offline. Use Save on this PC before closing.');}));
-$('connect-online').addEventListener('click',()=>void locked(async()=>{await saveLocal(false);openLogin();}));
+$('connect-online').addEventListener('click',()=>void locked(async()=>{if(dirty || localVersion || selected)await saveLocal(false);openLogin();}));
+$('save-settings').addEventListener('click',()=>void locked(async()=>{const settings=readConnection();localStorage.setItem('curated-studio-connection',JSON.stringify(settings));$('connection').open=false;tell('Settings saved. Enter your password to unlock publishing.',false,true);},true));
 $('save-local').addEventListener('click',()=>void locked(()=>saveLocal()));
 $('delete-local').addEventListener('click',()=>{if(!confirm('Delete this local draft and its saved files? Any product already in Supabase will remain.'))return;void locked(async()=>{await deleteDraft(createId,localVersion);await refreshLocal();fill();tell('Local draft deleted.');});});
 for(const button of document.querySelectorAll('[data-clear-media]'))button.addEventListener('click',()=>{delete pendingMedia[button.dataset.clearMedia];dirty=true;renderMedia();updatePreview();});
 window.addEventListener('focus',()=>{if(!busy)void refreshLocal().catch(()=>{});});
 try {
   const defaults=await (await fetch('/config.json')).json();let cached={};try{cached=JSON.parse(localStorage.getItem('curated-studio-connection') || '{}');}catch{}
-  const settings={...defaults,...cached};$('supabase-url').value=settings.supabaseUrl || '';$('public-key').value=settings.publishableKey || '';$('site-url').value=settings.siteUrl || 'https://curatedpick1.pages.dev';
-  $('connection').open=!settings.publishableKey || !settings.supabaseUrl || settings.supabaseUrl.includes('YOUR-');
+  const settings={...defaults,...cached};$('supabase-url').value=settings.supabaseUrl || '';$('public-key').value=settings.publishableKey || '';$('site-url').value=settings.siteUrl || 'https://curatedpick1.pages.dev';$('email').value=settings.editorEmail || '';
+  lastBoard=localStorage.getItem('curated-studio-board') || '';
+  $('connection').open=!settings.publishableKey || !settings.supabaseUrl || settings.supabaseUrl.includes('YOUR-') || !settings.editorEmail;
 }catch{$('connection').open=true;tell('Fill in the public connection settings to get started.',false,true);}
+showWorkspace();fill();try{await refreshLocal();}catch(error){tell(`Local storage is unavailable: ${error.message}`,true);}

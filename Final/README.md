@@ -10,7 +10,7 @@ The floating Curated assistant searches `/assistant-catalog.json`, generated fro
 
 **Start with [SETUP.md](SETUP.md)** for the complete Supabase → hosting → Pinterest setup.
 
-**Want a private product form on your computer?** Run `npm run studio` and open http://127.0.0.1:4333 on Windows or Linux. Choose **Work on local drafts**, then **Save on this PC** to keep unfinished products and selected photos/videos offline in your browser. Sign in and publish when ready. Follow [LOCAL-STUDIO.md](LOCAL-STUDIO.md) to enable your login and give friends their own editor accounts. This local app connects to the same Supabase catalog and is separate from the public storefront.
+**Want a private product form on your computer?** With Node.js 24 installed, double-click **Start Studio.cmd** on Windows or run **Start Studio.sh** on Linux. It starts the local server and opens the browser; first launch installs missing dependencies. The form opens immediately. Use **Save on this PC** to keep unfinished products and selected photos/videos offline. Enter your editor email once in settings; daily publishing unlocks with only your password. Follow [LOCAL-STUDIO.md](LOCAL-STUDIO.md) to enable your login and give friends their own editor accounts. This local app connects to the same Supabase catalog and is separate from the public storefront.
 
 ## Preview on your computer
 

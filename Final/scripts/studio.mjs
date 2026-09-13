@@ -13,6 +13,7 @@ const publicConfig = {
   supabaseUrl: config.SUPABASE_URL || '',
   publishableKey: config.SUPABASE_PUBLISHABLE_KEY?.startsWith('sb_publishable_') ? config.SUPABASE_PUBLISHABLE_KEY : '',
   siteUrl: config.SITE_URL?.includes('YOUR-') ? '' : config.SITE_URL || '',
+  editorEmail: config.STUDIO_EDITOR_EMAIL || '',
 };
 const routes = new Map([
   ['/', ['studio/index.html','text/html; charset=utf-8']],
@@ -24,7 +25,7 @@ const routes = new Map([
 ]);
 const server = createServer(async (req,res) => {
   const origin = 'http://127.0.0.1:4333';
-  const headers = { 'Cache-Control':'no-store', 'X-Content-Type-Options':'nosniff', 'Referrer-Policy':'no-referrer',
+  const headers = { 'X-Curated-Studio':'1', 'Cache-Control':'no-store', 'X-Content-Type-Options':'nosniff', 'Referrer-Policy':'no-referrer',
     'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https: blob:; connect-src 'self' https://*.supabase.co; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" };
   if (req.headers.host !== '127.0.0.1:4333' || (req.headers.origin && req.headers.origin !== origin) || req.headers['sec-fetch-site'] === 'cross-site') {res.writeHead(403,headers).end('Use http://127.0.0.1:4333');return;}
   if (!['GET','HEAD'].includes(req.method)) {res.writeHead(405,headers).end();return;}
