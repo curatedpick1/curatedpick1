@@ -13,7 +13,8 @@ const publicConfig = {
   supabaseUrl: config.SUPABASE_URL || '',
   publishableKey: config.SUPABASE_PUBLISHABLE_KEY?.startsWith('sb_publishable_') ? config.SUPABASE_PUBLISHABLE_KEY : '',
   siteUrl: config.SITE_URL?.includes('YOUR-') ? '' : config.SITE_URL || '',
-  editorEmail: config.STUDIO_EDITOR_EMAIL || '',
+  // Password auth requires an internal identifier; the single-admin UI never asks for it.
+  editorEmail: config.STUDIO_EDITOR_EMAIL || 'curatedpick.store@gmail.com',
 };
 const routes = new Map([
   ['/', ['studio/index.html','text/html; charset=utf-8']],

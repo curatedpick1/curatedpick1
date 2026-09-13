@@ -7,13 +7,13 @@ const pageSize = 100;
 let localDrafts=[], localVersion=0, draftProject=null, pendingMedia={}, previewUrl, hasForm=false, lastBoard='';
 function tell(text, error = false, login = false) {const node = $(login ? 'login-status' : 'notice');node.textContent=text;node.classList.toggle('error',error);}
 function safeUrl(value) {const url=new URL(value);if(url.protocol!=='https:' || url.username || url.password || /\s/.test(value))throw new Error('Use a full HTTPS URL.');return url;}
-function readConnection() {
-  const url=safeUrl($('supabase-url').value.trim());
+function readConnection(settings) {
+  const url=safeUrl(settings.supabaseUrl || '');
   if(!/^[a-z0-9-]+\.supabase\.co$/.test(url.hostname) || url.port || url.pathname !== '/')throw new Error('Enter your Supabase project URL: https://your-project.supabase.co');
-  const key=$('public-key').value.trim();if(!key.startsWith('sb_publishable_'))throw new Error('Use the sb_publishable_ key. Secret/service-role keys do not belong in this app.');
-  const site=safeUrl($('site-url').value.trim());
+  const key=settings.publishableKey || '';if(!key.startsWith('sb_publishable_'))throw new Error('The local Studio is missing its public Supabase configuration.');
+  const site=safeUrl(settings.siteUrl || '');
   if(site.pathname!=='/' || site.search || site.hash)throw new Error('Website URL should be only the origin, for example https://curatedpick1.pages.dev');
-  const editorEmail=$('email').value.trim();if(!editorEmail || !$('email').validity.valid){$('connection').open=true;throw new Error('Add your Supabase editor email once in settings.');}
+  const editorEmail=settings.editorEmail || '';if(!editorEmail)throw new Error('The local Studio is missing its admin account configuration.');
   return {supabaseUrl:url.origin,publishableKey:key,siteUrl:site.origin,editorEmail};
 }
 async function request(path, options={}, auth=true) {
@@ -85,12 +85,11 @@ async function refresh(reset=true) {
   renderList();renderJob();
 }
 $('login-form').addEventListener('submit',event=>{event.preventDefault();void locked(async()=>{
-  connection=readConnection();if(!$('password').value)throw new Error('Enter your editor password.');tell('Unlocking…',false,true);
+  if(!connection)throw new Error('Studio configuration is missing. Follow NEXT-STEPS.txt.');if(!$('password').value)throw new Error('Enter the admin passkey.');tell('Unlocking…',false,true);
   const data=await request('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:connection.editorEmail,password:$('password').value})},false);
   session={...data,deadline:Date.now()+data.expires_in*1000};$('password').value='';
   try {await refresh();} catch(error) {session=null;throw new Error(`Signed in, but editor access is unavailable. Run migration 003 and add this user to catalog_editors. ${error.message}`);}
-  try{localStorage.setItem('curated-studio-connection',JSON.stringify(connection));}catch{}
-  $('connection').open=false;await refreshLocal();showWorkspace();if(!hasForm)fill();tell('Publishing unlocked. Your draft is ready.');
+  await refreshLocal();showWorkspace();if(!hasForm)fill();tell('Publishing unlocked. Your draft is ready.');
 },true);});
 $('logout').addEventListener('click',()=>void locked(async()=>{if(dirty || localVersion || selected)await saveLocal(false);try{await request('/auth/v1/logout',{method:'POST'});}catch{}session=null;products=[];status=null;showWorkspace();renderList();renderJob();tell('Publishing locked. Local drafts are still available.');}));
 $('new-product').addEventListener('click',()=>{if(allowDiscard()){fill();tell('');field('title').focus();}});
@@ -182,7 +181,7 @@ function renderLocalList() {
 }
 async function refreshLocal(){localDrafts=await listDrafts();renderLocalList();}
 async function saveLocal(announce=true) {
-  const draft={id:createId,project:draftProject,siteUrl:connection?.siteUrl || $('site-url').value.trim(),product:selected || null,values:payload(!!selected?.published,false),media:pendingMedia};
+  const draft={id:createId,project:draftProject,siteUrl:connection?.siteUrl || '',product:selected || null,values:payload(!!selected?.published,false),media:pendingMedia};
   let saved;
   try{saved=await putDraft(draft,localVersion);}catch(error){throw new Error(`Could not save on this PC. ${error.name==='QuotaExceededError'?'Browser storage is full. Free space or remove old drafts.':error.message} Your current form is still open.`);}
   localVersion=saved.version;dirty=false;await refreshLocal();
@@ -190,15 +189,12 @@ async function saveLocal(announce=true) {
 }
 $('work-local').addEventListener('click',()=>void locked(async()=>{showWorkspace();if(!hasForm)fill();await refreshLocal();tell('Ready to work offline. Use Save on this PC before closing.');}));
 $('connect-online').addEventListener('click',()=>void locked(async()=>{if(dirty || localVersion || selected)await saveLocal(false);openLogin();}));
-$('save-settings').addEventListener('click',()=>void locked(async()=>{const settings=readConnection();localStorage.setItem('curated-studio-connection',JSON.stringify(settings));$('connection').open=false;tell('Settings saved. Enter your password to unlock publishing.',false,true);},true));
 $('save-local').addEventListener('click',()=>void locked(()=>saveLocal()));
 $('delete-local').addEventListener('click',()=>{if(!confirm('Delete this local draft and its saved files? Any product already in Supabase will remain.'))return;void locked(async()=>{await deleteDraft(createId,localVersion);await refreshLocal();fill();tell('Local draft deleted.');});});
 for(const button of document.querySelectorAll('[data-clear-media]'))button.addEventListener('click',()=>{delete pendingMedia[button.dataset.clearMedia];dirty=true;renderMedia();updatePreview();});
 window.addEventListener('focus',()=>{if(!busy)void refreshLocal().catch(()=>{});});
 try {
-  const defaults=await (await fetch('/config.json')).json();let cached={};try{cached=JSON.parse(localStorage.getItem('curated-studio-connection') || '{}');}catch{}
-  const settings={...defaults,...cached};$('supabase-url').value=settings.supabaseUrl || '';$('public-key').value=settings.publishableKey || '';$('site-url').value=settings.siteUrl || 'https://curatedpick1.pages.dev';$('email').value=settings.editorEmail || '';
+  const defaults=await (await fetch('/config.json')).json();connection=readConnection(defaults);
   lastBoard=localStorage.getItem('curated-studio-board') || '';
-  $('connection').open=!settings.publishableKey || !settings.supabaseUrl || settings.supabaseUrl.includes('YOUR-') || !settings.editorEmail;
-}catch{$('connection').open=true;tell('Fill in the public connection settings to get started.',false,true);}
+}catch(error){connection=null;tell(`${error.message} Follow NEXT-STEPS.txt.`,true);}
 showWorkspace();fill();try{await refreshLocal();}catch(error){tell(`Local storage is unavailable: ${error.message}`,true);}
