@@ -15,11 +15,11 @@ This creates `catalog_editors` and grants approved users product editing and med
 ## 2. Create a login for yourself
 
 1. In Supabase, open **Authentication → Users → Add user → Create new user**.
-2. Create a user with an email and strong password. Confirm the email via the dashboard option if available; this account is for the publishing tool, not your Supabase dashboard login.
+2. Create the single admin user with `curatedpick.store@gmail.com` and your chosen admin passkey. Confirm the email via the dashboard option if available. This internal email never appears on the Studio login page.
 3. Copy that user's UUID.
 4. In **Table Editor → catalog_editors**, add a row with `user_id` set to that UUID. Leave `label` blank and the date at its default. No display name is needed.
 
-Set your chosen editor password in Supabase when creating the account; the local app does not embed a shared password. Repeat with a separate account/UUID for each friend. Share each person's credentials privately and let them choose their own password using your chosen account management process. Never distribute your Supabase owner login, service-role key, or Pinterest app secret. Deleting a person's `catalog_editors` row immediately removes their database editing rights, including for an already signed-in session.
+The Studio contains one admin login, as requested. Its page asks only for the passkey; Supabase uses the internal email behind the scenes. The passkey is checked by Supabase and is never embedded in the webpage or GitHub. Anyone with the passkey receives full editor access, so share it only with trusted collaborators. Never distribute your Supabase owner login, service-role key, or Pinterest app secret. Deleting the admin's `catalog_editors` row immediately removes editing rights, including for an already unlocked session.
 
 ## 3. Run it on your PC
 
@@ -39,15 +39,7 @@ The product form opens immediately, without a password or Supabase setup. Use **
 
 Use the same browser profile and the exact `http://127.0.0.1:4333` address each time. Drafts live in that browser's IndexedDB, not in your source folder or Supabase. Your friend cannot see them yet. Clearing browser site data, using a private window, or losing that browser profile can remove local drafts. Files referenced only by an online URL are not downloaded for offline use; choose local files for offline previews.
 
-Click **Unlock publishing**, open **One-time settings**, and enter your editor email once, along with:
-
-| Setting | Your value |
-| --- | --- |
-| Supabase project URL | The same URL used in Cloudflare |
-| Publishable key | The same `sb_publishable_...` key used in Cloudflare |
-| Public website URL | `https://curatedpick1.pages.dev` (confirm this matches the deployed site) |
-
-Click **Save settings**. Daily unlocking now asks for only your editor password; the account email and public connection settings are remembered in your browser. Passwords and auth tokens are not stored by the app; a reload requires signing in again to access Supabase. Local drafts still open without signing in. Your browser's password manager is separate. Anyone using this same browser profile can open its local drafts.
+Click **Unlock publishing**, enter only the admin passkey, and click **Unlock**. The Supabase project, public key, website URL, and internal admin email are configured by the local server and do not appear on the page. Passwords and auth tokens are not stored by the app; a reload requires unlocking again. Local drafts still open without unlocking. Anyone using this same browser profile can open its local drafts.
 
 Optionally copy [.env.studio.example](.env.studio.example) to `.env.studio` and fill those same public defaults. The server also reads public defaults from `.env` and `.env.example` if present. `.env.studio` is ignored by Git. No private backend key is needed by the local app.
 
@@ -55,7 +47,7 @@ Optionally copy [.env.studio.example](.env.studio.example) to `.env.studio` and 
 
 Give them a copy of the project's source or repository access. Since the `curatedpick1/curatedpick1` repository contains this project's files directly at its root, their terminal should open that folder (there is no nested `Final` there).
 
-They install Node.js 24, run `npm ci`, then `npm run studio`, open the same localhost address on their own PC, enter the same public connection settings, and use their own editor account. Copy source files only; do not send your `.env.publisher`, `.env.functions`, or other secret files. All editors share the catalog. If two people edit a product concurrently, a stale save is rejected rather than silently overwriting the other edit.
+They install Node.js 24 and run the Linux launcher described above. The project already contains its public connection settings; they unlock publishing with the same single admin passkey. Copy source files only; do not send your `.env.publisher`, `.env.functions`, or other secret files. Anyone with the passkey can edit the shared catalog. If two people edit a product concurrently, a stale save is rejected rather than silently overwriting the other edit.
 
 ## 5. Use the product form
 

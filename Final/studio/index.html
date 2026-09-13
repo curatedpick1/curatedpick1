@@ -9,19 +9,11 @@
 <main>
   <section id="login-view" class="login-layout" hidden>
     <form id="login-form" class="panel" novalidate>
-      <h1>Unlock publishing</h1><p>Your editor password.</p>
-      <label>Password<input id="password" type="password" required autocomplete="current-password"></label>
+      <h1>Admin</h1>
+      <label>Passkey<input id="password" type="password" required autocomplete="current-password"></label>
       <button class="primary" type="submit">Unlock</button>
       <button type="button" id="work-local">Back to drafts</button>
       <p id="login-status" role="status"></p>
-      <details id="connection"><summary>One-time settings</summary>
-        <label>Editor account email<input id="email" type="email" required autocomplete="username"></label>
-        <small>Saved in this browser. You only type your password next time.</small>
-        <label>Supabase URL<input id="supabase-url" type="url" required placeholder="https://your-project.supabase.co"></label>
-        <label>Publishable key<input id="public-key" required placeholder="sb_publishable_…" autocomplete="off"></label>
-        <label>Website URL<input id="site-url" type="url" required placeholder="https://curatedpick1.pages.dev"></label>
-        <button type="button" id="save-settings">Save settings</button>
-      </details>
     </form>
   </section>
   <section id="workspace" hidden>

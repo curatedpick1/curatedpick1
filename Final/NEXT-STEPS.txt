@@ -64,31 +64,21 @@ e) Click Run. This SQL can be rerun if you already applied this editor migration
 Now create your editor account:
 
 f) Open Authentication -> Users -> Add user -> Create new user.
-g) Enter your email and set the editor password you chose. Confirm the email.
-   This is a new APP account. The password is checked by Supabase, not hardcoded
-   in the local app. No display name is needed.
+g) Use curatedpick.store@gmail.com as the email and set your chosen admin
+   passkey as its password. Confirm the email. No display name is needed.
+   The email is internal and never appears in the daily Studio login.
 h) Copy the new user's ID (the long UUID).
 i) Open Table Editor -> catalog_editors -> Insert row.
 j) Paste the UUID into user_id. Leave label blank. Save.
 
-In the local app, click "Unlock publishing".
-Open "One-time settings". Enter the editor account email you just created,
-then enter:
-
-Supabase project URL:
-https://hrwjogpklvgdvljrhptw.supabase.co
-
-Publishable key:
-Copy your sb_publishable_... key from Supabase API Keys.
-
-Public website URL:
-https://curatedpick1.pages.dev
-
-Click Save settings. It closes the settings section.
-Now enter only the editor password and click Unlock.
-Future visits ask for the password only; the email is remembered in this browser.
+The Studio is already configured for your Supabase project and website.
+Click "Unlock publishing", enter only the admin passkey, and click Unlock.
+There is no username, email, Supabase URL, or API-key field on the page.
 Your local form is preserved. Reloading the page locks publishing again.
-Only the publishable key belongs in settings. No secret/service-role key.
+
+If Unlock says "Invalid login credentials", the Supabase Authentication user
+does not exist yet or its password differs. Fix that user in Authentication ->
+Users. Do not put the passkey in source code, .env files, GitHub, or Cloudflare.
 
 
 3. CHECK ONE PRODUCT BEFORE AUTOMATION
@@ -356,7 +346,7 @@ Do not reset an uncertain production job; first check whether its Pin exists.
 -----------------------------------
 You do publisher/Pinterest setup once. Your friend does NOT repeat steps 4-7.
 
-a) Create their own editor account and catalog_editors row using step 2.
+a) Do not create another account. This setup intentionally has one admin account.
 b) Give them clean source from the GitHub repository:
    https://github.com/curatedpick1/curatedpick1
    Grant repository access if needed, or send a ZIP of that repository's source.
@@ -375,10 +365,10 @@ f) For daily use, they open Start Studio.sh. If their file manager opens it as
    they do not need to type commands each time.
 g) The launcher opens http://127.0.0.1:4333 and runs the server in the background.
    The form opens without a password for local drafts.
-h) For publishing, they enter the public connection settings and THEIR editor
-   email once, click Save settings, then unlock with THEIR password.
+h) For publishing, they use the same admin passkey. Anyone who knows it has full
+   editor access, so share it only with a person you trust.
 
-You both see shared Supabase products after signing in and refreshing.
+You both see shared Supabase products after unlocking and refreshing.
 Local drafts stay on the PC/browser where they were saved.
 Both editors queue Pins for the ONE Pinterest account you connected.
 
