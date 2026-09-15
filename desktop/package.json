@@ -1,0 +1,53 @@
+{
+  "name": "curated-studio",
+  "productName": "Curated Studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Offline product drafts and publishing for The Curated Pick",
+  "author": "The Curated Pick",
+  "main": "main.cjs",
+  "scripts": {
+    "prepare:app": "node prepare.mjs",
+    "start": "npm run prepare:app && electron .",
+    "dist": "npm run prepare:app && electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "44.3.0",
+    "electron-builder": "26.15.3",
+    "sharp": "0.35.4"
+  },
+  "build": {
+    "appId": "store.curatedpick.studio",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.cjs",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Curated-Studio-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": false,
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}
