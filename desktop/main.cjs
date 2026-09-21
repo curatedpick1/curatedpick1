@@ -1,6 +1,7 @@
 const {app, BrowserWindow, protocol, session, shell, dialog, Menu} = require('electron');
 const {readFile} = require('node:fs/promises');
 const path = require('node:path');
+const {createStudioSession} = require('./studio-auth.cjs');
 
 app.setName('Curated Studio');
 // A stable local origin keeps IndexedDB drafts across restarts and upgrades.
@@ -28,6 +29,7 @@ else {
   app.whenReady().then(async () => {
     const config = JSON.parse(await readFile(path.join(assets, 'config.json'), 'utf8'));
     const site = new URL(config.siteUrl).origin;
+    const getSession = createStudioSession(config, path.join(__dirname, 'private', 'editor.json'));
     const headers = {
       'Content-Security-Policy': `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https: blob:; connect-src 'self' ${new URL(config.supabaseUrl).origin}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
       'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store',
@@ -35,6 +37,11 @@ else {
     protocol.handle('curated', async request => {
       const url = new URL(request.url);
       const route = routes.get(url.pathname);
+      if (url.host === 'studio' && url.pathname === '/session') {
+        if (request.method !== 'POST') return new Response(null, {status:405, headers});
+        try {return Response.json(await getSession(), {headers});}
+        catch(error) {return Response.json({error:error.message}, {status:503, headers});}
+      }
       if (url.host !== 'studio' || !route) return new Response('Not found', {status: 404, headers});
       if (!['GET', 'HEAD'].includes(request.method)) return new Response(null, {status: 405, headers});
       try {

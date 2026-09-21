@@ -2,8 +2,9 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
+import auth from './studio-auth.cjs';
 
-// This serves a local interface only. There is no privileged key or writable HTTP API.
+// Loopback-only app. The private editor credential is never served as a file.
 const root = new URL('../', import.meta.url);
 let config = {};
 for (const name of ['.env.example', '.env', '.env.studio']) {
@@ -13,8 +14,6 @@ const publicConfig = {
   supabaseUrl: config.SUPABASE_URL || '',
   publishableKey: config.SUPABASE_PUBLISHABLE_KEY?.startsWith('sb_publishable_') ? config.SUPABASE_PUBLISHABLE_KEY : '',
   siteUrl: config.SITE_URL?.includes('YOUR-') ? '' : config.SITE_URL || '',
-  // Password auth requires an internal identifier; the single-admin UI never asks for it.
-  editorEmail: config.STUDIO_EDITOR_EMAIL || 'curatedpick.store@gmail.com',
 };
 const routes = new Map([
   ['/', ['studio/index.html','text/html; charset=utf-8']],
@@ -24,13 +23,20 @@ const routes = new Map([
   ['/logo.svg', ['public/favicon.svg','image/svg+xml']],
   ['/font.woff2', ['node_modules/@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2','font/woff2']],
 ]);
+const getSession = auth.createStudioSession(publicConfig, new URL('../.private/studio-access.json', import.meta.url));
 const server = createServer(async (req,res) => {
   const origin = 'http://127.0.0.1:4333';
   const headers = { 'X-Curated-Studio':'1', 'Cache-Control':'no-store', 'X-Content-Type-Options':'nosniff', 'Referrer-Policy':'no-referrer',
     'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https: blob:; connect-src 'self' https://*.supabase.co; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" };
   if (req.headers.host !== '127.0.0.1:4333' || (req.headers.origin && req.headers.origin !== origin) || req.headers['sec-fetch-site'] === 'cross-site') {res.writeHead(403,headers).end('Use http://127.0.0.1:4333');return;}
-  if (!['GET','HEAD'].includes(req.method)) {res.writeHead(405,headers).end();return;}
   const path = new URL(req.url,origin).pathname;
+  if (path === '/session') {
+    if (req.method !== 'POST' || req.headers.origin !== origin) {res.writeHead(403,headers).end();return;}
+    try {res.writeHead(200,{...headers,'Content-Type':'application/json'}).end(JSON.stringify(await getSession()));}
+    catch(error) {res.writeHead(503,{...headers,'Content-Type':'application/json'}).end(JSON.stringify({error:error.message}));}
+    return;
+  }
+  if (!['GET','HEAD'].includes(req.method)) {res.writeHead(405,headers).end();return;}
   if (path === '/config.json') {res.writeHead(200,{...headers,'Content-Type':'application/json'}).end(req.method==='HEAD' ? '' : JSON.stringify(publicConfig));return;}
   const route = routes.get(path);
   if (!route) {res.writeHead(404,headers).end('Not found');return;}
