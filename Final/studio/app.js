@@ -5,7 +5,7 @@ const field = name => form.elements.namedItem(name);
 let connection, session, products = [], status, selected, createId, dirty = false, busy = false, offset = 0;
 const pageSize = 100;
 let localDrafts=[], localVersion=0, draftProject=null, pendingMedia={}, previewUrl, hasForm=false, lastBoard='';
-function tell(text, error = false, login = false) {const node = $(login ? 'login-status' : 'notice');node.textContent=text;node.classList.toggle('error',error);}
+function tell(text, error = false) {const node = $('notice');node.textContent=text;node.classList.toggle('error',error);}
 function safeUrl(value) {const url=new URL(value);if(url.protocol!=='https:' || url.username || url.password || /\s/.test(value))throw new Error('Use a full HTTPS URL.');return url;}
 function readConnection(settings) {
   const url=safeUrl(settings.supabaseUrl || '');
@@ -13,21 +13,36 @@ function readConnection(settings) {
   const key=settings.publishableKey || '';if(!key.startsWith('sb_publishable_'))throw new Error('The local Studio is missing its public Supabase configuration.');
   const site=safeUrl(settings.siteUrl || '');
   if(site.pathname!=='/' || site.search || site.hash)throw new Error('Website URL should be only the origin, for example https://curatedpick1.pages.dev');
-  const editorEmail=settings.editorEmail || '';if(!editorEmail)throw new Error('The local Studio is missing its admin account configuration.');
-  return {supabaseUrl:url.origin,publishableKey:key,siteUrl:site.origin,editorEmail};
+  return {supabaseUrl:url.origin,publishableKey:key,siteUrl:site.origin};
 }
 async function request(path, options={}, auth=true) {
   if(auth) {
-    if(!session)throw new Error('Sign in again to continue.');
-    if(Date.now()>session.deadline-60000) {
-      const refreshed=await request('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:JSON.stringify({refresh_token:session.refresh_token})},false);
-      session={...refreshed,deadline:Date.now()+refreshed.expires_in*1000};
-    }
+    if(!session || Date.now()>session.deadline-60000) await obtainSession();
   }
   const response=await fetch(connection.supabaseUrl+path,{...options,signal:AbortSignal.timeout(90000),headers:{apikey:connection.publishableKey,...(auth?{Authorization:`Bearer ${session.access_token}`} : {}),'Content-Type':'application/json',...options.headers}});
   const data=response.status===204 ? null : await response.json().catch(()=>null);
-  if(!response.ok) {const error=new Error(data?.msg || data?.message || data?.error_description || data?.error || `Supabase request failed (${response.status}).`);error.code=data?.code;throw error;}
+  if(!response.ok) {if(response.status===401){session=null;showWorkspace();}const error=new Error(data?.msg || data?.message || data?.error_description || data?.error || `Supabase request failed (${response.status}).`);error.code=data?.code;throw error;}
   return data;
+}
+let sessionPromise;
+async function obtainSession() {
+  if(sessionPromise)return sessionPromise;
+  sessionPromise=(async()=>{
+    try {
+      const response=await fetch('/session',{method:'POST',signal:AbortSignal.timeout(25000)});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error || 'Publishing is unavailable. Try Reconnect.');
+      session={...data,deadline:Date.now()+data.expires_in*1000};
+    }catch(error){session=null;throw new Error(error.message || 'Offline. Your drafts are safe; reconnect to publish.');}
+    finally{showWorkspace();}
+  })();
+  try{return await sessionPromise;}finally{sessionPromise=null;}
+}
+async function connect() {
+  if(!connection)throw new Error('This copy is missing its project configuration. Install the latest Studio installer.');
+  await obtainSession();
+  try{await refresh();}catch(error){session=null;showWorkspace();throw error;}
+  showWorkspace();
 }
 async function locked(action, login=false) {
   if(busy)return;busy=true;
@@ -73,7 +88,7 @@ function renderJob() {
 function renderList() {
   const q=$('library-search').value.toLowerCase();$('product-list').replaceChildren();$('product-count').textContent=String(products.length);
   const shown=products.filter(p=>`${p.title} ${p.category}`.toLowerCase().includes(q));
-  if(!shown.length){const p=document.createElement('p');p.className='note';p.textContent=!session?'Sign in to see the shared catalog.':products.length?'No matching products.':'No products yet. Start your first find.';$('product-list').append(p);}
+  if(!shown.length){const p=document.createElement('p');p.className='note';p.textContent=!session?'Connect to see shared products.':products.length?'No matching products.':'No products yet. Start your first find.';$('product-list').append(p);}
   for(const p of shown){const b=document.createElement('button');b.type='button';b.className=`product-item${selected?.id===p.id?' active':''}`;const title=document.createElement('strong');title.textContent=p.title || 'Untitled draft';const info=document.createElement('span');const job=status?.jobs?.find(j=>j.product_id===p.id);info.textContent=`${p.published?'Published':'Draft'} · ${p.category}${job ? ` · Pin ${job.state}`:''}`;b.append(title,info);b.addEventListener('click',()=>{if(allowDiscard()){fill(p);tell('');}});$('product-list').append(b);}
 }
 async function refresh(reset=true) {
@@ -84,14 +99,6 @@ async function refresh(reset=true) {
   $('pin-state').textContent=status.pinterest_connected?'Credentials saved':'Not connected yet';
   renderList();renderJob();
 }
-$('login-form').addEventListener('submit',event=>{event.preventDefault();void locked(async()=>{
-  if(!connection)throw new Error('Studio configuration is missing. Follow NEXT-STEPS.txt.');if(!$('password').value)throw new Error('Enter the admin passkey.');tell('Unlocking…',false,true);
-  const data=await request('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:connection.editorEmail,password:$('password').value})},false);
-  session={...data,deadline:Date.now()+data.expires_in*1000};$('password').value='';
-  try {await refresh();} catch(error) {session=null;throw new Error(`Signed in, but editor access is unavailable. Run migration 003 and add this user to catalog_editors. ${error.message}`);}
-  await refreshLocal();showWorkspace();if(!hasForm)fill();tell('Publishing unlocked. Your draft is ready.');
-},true);});
-$('logout').addEventListener('click',()=>void locked(async()=>{if(dirty || localVersion || selected)await saveLocal(false);try{await request('/auth/v1/logout',{method:'POST'});}catch{}session=null;products=[];status=null;showWorkspace();renderList();renderJob();tell('Publishing locked. Local drafts are still available.');}));
 $('new-product').addEventListener('click',()=>{if(allowDiscard()){fill();tell('');field('title').focus();}});
 $('library-search').addEventListener('input',renderList);
 $('refresh').addEventListener('click',()=>void locked(async()=>{await refresh();tell('Status refreshed. Your unsaved form edits are preserved.');}));
@@ -124,7 +131,7 @@ function payload(published,validate=true) {
 }
 async function save(published) {
   await saveLocal(false);
-  if(!session){openLogin();return;}
+  if(!session)await connect();
   if(draftProject && draftProject!==connection.supabaseUrl)throw new Error('This draft belongs to a different Supabase project. Sign in to that project before saving it online.');
   if(!published && selected?.published && !confirm('Unpublish this product? Its public page will be removed on the next deployment. Existing Pins will remain.'))return;
   payload(published);draftProject=connection.supabaseUrl;await saveLocal(false);
@@ -158,15 +165,11 @@ $('save-draft').addEventListener('click',()=>void locked(()=>save(false)));
 $('copy-url').addEventListener('click',()=>void locked(async()=>{try{await navigator.clipboard.writeText($('product-url').value);tell('Product URL copied.');}catch{$('product-url').focus();$('product-url').select();tell('Select and copy the product URL above.');}}));
 window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
 function showWorkspace() {
-  $('login-view').hidden=true;$('workspace').hidden=false;$('logout').hidden=!session;$('connect-online').hidden=!!session;
-  $('signed-in').textContent=session?'Publishing unlocked':'Draft offline. Unlock to publish.';
-  $('connection-state').textContent=session?'Signed in as editor':'Local drafts only';
+  $('workspace').hidden=false;$('connect-online').hidden=!!session;
+  $('signed-in').textContent=session?'Connected. Ready to publish.':'Draft offline. Connect to publish.';
+  $('connection-state').textContent=session?'Connected to Supabase':'Local drafts only';
   $('refresh').hidden=!session;
-  if(!session){$('site-state').textContent='Sign in to check';$('pin-state').textContent='Sign in to check';$('load-more').hidden=true;}
-}
-function openLogin() {
-  $('workspace').hidden=true;$('login-view').hidden=false;$('connect-online').hidden=true;
-  tell(localVersion?'Draft saved. Unlock, then click Publish again.':'Enter your password to publish.',false,true);$('password').focus();
+  if(!session){$('site-state').textContent='Connect to check';$('pin-state').textContent='Connect to check';$('load-more').hidden=true;}
 }
 function renderMedia() {
   for(const [id,target] of [['poster-file','poster_url'],['cover-file','pin_image_url'],['video-file','video_path']]) {
@@ -187,8 +190,7 @@ async function saveLocal(announce=true) {
   localVersion=saved.version;dirty=false;await refreshLocal();
   if(announce)tell('Saved on this PC, including selected files. Nothing was sent to Supabase or Pinterest.');
 }
-$('work-local').addEventListener('click',()=>void locked(async()=>{showWorkspace();if(!hasForm)fill();await refreshLocal();tell('Ready to work offline. Use Save on this PC before closing.');}));
-$('connect-online').addEventListener('click',()=>void locked(async()=>{if(dirty || localVersion || selected)await saveLocal(false);openLogin();}));
+$('connect-online').addEventListener('click',()=>void locked(async()=>{await connect();tell('Connected. Your current draft is ready.');}));
 $('save-local').addEventListener('click',()=>void locked(()=>saveLocal()));
 $('delete-local').addEventListener('click',()=>{if(!confirm('Delete this local draft and its saved files? Any product already in Supabase will remain.'))return;void locked(async()=>{await deleteDraft(createId,localVersion);await refreshLocal();fill();tell('Local draft deleted.');});});
 for(const button of document.querySelectorAll('[data-clear-media]'))button.addEventListener('click',()=>{delete pendingMedia[button.dataset.clearMedia];dirty=true;renderMedia();updatePreview();});
@@ -196,5 +198,6 @@ window.addEventListener('focus',()=>{if(!busy)void refreshLocal().catch(()=>{});
 try {
   const defaults=await (await fetch('/config.json')).json();connection=readConnection(defaults);
   lastBoard=localStorage.getItem('curated-studio-board') || '';
-}catch(error){connection=null;tell(`${error.message} Follow NEXT-STEPS.txt.`,true);}
+}catch(error){connection=null;tell(error.message,true);}
 showWorkspace();fill();try{await refreshLocal();}catch(error){tell(`Local storage is unavailable: ${error.message}`,true);}
+if(connection)void connect().catch(error=>tell(`Working offline. ${error.message}`,true));

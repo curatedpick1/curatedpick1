@@ -5,17 +5,8 @@
   <title>Curated Studio</title><link rel="icon" href="/logo.svg"><link rel="stylesheet" href="/style.css"><script src="/app.js" type="module"></script>
 </head>
 <body>
-<header><a class="brand" href="/"><img src="/logo.svg" width="32" height="32" alt="">The Curated Pick <span>STUDIO</span></a><div class="actions"><button id="connect-online" hidden>Unlock publishing</button><button id="logout" hidden>Lock publishing</button></div></header>
+<header><a class="brand" href="/"><img src="/logo.svg" width="32" height="32" alt="">The Curated Pick <span>STUDIO</span></a><div class="actions"><button id="connect-online" hidden>Reconnect</button></div></header>
 <main>
-  <section id="login-view" class="login-layout" hidden>
-    <form id="login-form" class="panel" novalidate>
-      <h1>Admin</h1>
-      <label>Passkey<input id="password" type="password" required autocomplete="current-password"></label>
-      <button class="primary" type="submit">Unlock</button>
-      <button type="button" id="work-local">Back to drafts</button>
-      <p id="login-status" role="status"></p>
-    </form>
-  </section>
   <section id="workspace" hidden>
     <div class="workspace-heading"><div><h1>Product studio</h1><p id="signed-in">Draft offline. Publish when ready.</p></div><div class="actions"><button id="refresh" hidden>Refresh</button><button id="new-product">+ New product</button></div></div>
     <p id="notice" role="status"></p>
