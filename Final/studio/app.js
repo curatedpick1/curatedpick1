@@ -1,10 +1,11 @@
 import {listDrafts, putDraft, deleteDraft} from './drafts.js';
+import {mediaKind, prepareMedia, posterFromVideo, restoreMedia} from './media.js';
 const $ = id => document.getElementById(id);
 const form = $('product-form');
 const field = name => form.elements.namedItem(name);
 let connection, session, products = [], status, selected, createId, dirty = false, busy = false, offset = 0;
 const pageSize = 100;
-let localDrafts=[], localVersion=0, draftProject=null, pendingMedia={}, previewUrl, hasForm=false, lastBoard='';
+let localDrafts=[], localVersion=0, draftProject=null, mediaItems=[], previewUrls=[], hasForm=false, lastBoard='';
 function tell(text, error = false) {const node = $('notice');node.textContent=text;node.classList.toggle('error',error);}
 function safeUrl(value) {const url=new URL(value);if(url.protocol!=='https:' || url.username || url.password || /\s/.test(value))throw new Error('Use a full HTTPS URL.');return url;}
 function readConnection(settings) {
@@ -51,13 +52,13 @@ async function locked(action, login=false) {
   finally {busy=false;buttons.forEach(b=>b.disabled=false);}
 }
 function allowDiscard() {return !busy && (!dirty || confirm('Discard edits since your last save? Use Save on this PC to keep them.'));}
-function updatePreview() {
-  const img=$('poster-preview');const value=field('poster_url').value.trim();
-  if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=null;}
-  if(pendingMedia.poster_url){previewUrl=URL.createObjectURL(pendingMedia.poster_url.file);img.src=previewUrl;img.hidden=false;$('poster-placeholder').hidden=true;return;}
-  try {img.src=safeUrl(value).href;img.hidden=false;$('poster-placeholder').hidden=true;} catch {img.removeAttribute('src');img.hidden=true;$('poster-placeholder').hidden=false;}
+function syncMedia() {
+  const poster=mediaItems.find(item=>item.kind==='image');const video=mediaItems.find(item=>item.kind==='video');
+  field('poster_url').value=poster?.url || '';
+  field('pin_image_url').value=poster?.pinUrl || poster?.url || '';
+  field('video_path').value=video?.path || '';
+  field('pin_media_type').value=video?'video':'image';
 }
-$('poster-preview').addEventListener('error',()=>{$('poster-preview').hidden=true;$('poster-placeholder').hidden=false;$('poster-placeholder').textContent='Image could not load. Check its public URL.';});
 function storeRow(store={}) {
   const row=document.createElement('div');row.className='store-row';
   for(const [key,label,type,max] of [['name','Store name','text',40],['url','Affiliate URL','url',2048],['note','Optional note','text',120]]) {
@@ -67,8 +68,9 @@ function storeRow(store={}) {
   const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label','Remove store');remove.addEventListener('click',()=>{row.remove();dirty=true;});row.append(remove);$('stores').append(row);
 }
 function fill(product, draft) {
-  hasForm=true;selected=product;createId=draft?.id || crypto.randomUUID();localVersion=draft?.version || 0;draftProject=draft?.project || (product?connection.supabaseUrl:null);pendingMedia=structuredClone(draft?.media || {});form.reset();$('stores').replaceChildren();
+  hasForm=true;selected=product;createId=draft?.id || crypto.randomUUID();localVersion=draft?.version || 0;draftProject=draft?.project || (product?connection.supabaseUrl:null);form.reset();$('stores').replaceChildren();
   const source=draft?.values || product || {title:'',description:'',category:'Home & living',tags:[],stores:[],pin_media_type:'image',publish_to_pinterest:true,pinterest_board_id:lastBoard};
+  mediaItems=restoreMedia(source,draft?.media);
   for(const name of ['title','description','category','poster_url','poster_alt','pin_media_type','pinterest_board_id','pin_image_url','video_path'])field(name).value=source[name] || '';
   field('tags').value=(source.tags || []).join(', ');
   for(const name of ['featured','publish_to_pinterest'])field(name).checked=!!source[name];
@@ -78,7 +80,7 @@ function fill(product, draft) {
   $('save-hint').textContent=product?.published?'Existing Pins are not reposted.':'Drafts stay on this PC. Publishing needs internet.';
   $('saved-links').hidden=!product;
   if(product){const url=`${draft?.siteUrl || connection.siteUrl}/products/${product.slug}/`;$('product-url').value=url;$('view-product').href=url;}
-  $('video-fields').hidden=source.pin_media_type!=='video';updatePreview();dirty=false;renderList();renderJob();renderMedia();renderLocalList();
+  syncMedia();dirty=false;renderList();renderJob();renderMedia();renderLocalList();
 }
 function renderJob() {
   const job=status?.jobs?.find(j=>j.product_id===selected?.id);
@@ -105,28 +107,38 @@ $('refresh').addEventListener('click',()=>void locked(async()=>{await refresh();
 $('load-more').addEventListener('click',()=>void locked(()=>refresh(false)));
 $('add-store').addEventListener('click',()=>{if($('stores').children.length>=8){tell('You can add up to eight stores.',true);return;}storeRow();dirty=true;});
 form.addEventListener('input',()=>{dirty=true;});
-for(const target of ['poster_url','pin_image_url','video_path'])field(target).addEventListener('input',()=>{delete pendingMedia[target];renderMedia();updatePreview();});
-field('pin_media_type').addEventListener('change',()=>{$('video-fields').hidden=field('pin_media_type').value!=='video';});
-field('pinterest_board_id').addEventListener('change',()=>{const board=field('pinterest_board_id').value.trim();if(/^\d+$/.test(board)){lastBoard=board;try{localStorage.setItem('curated-studio-board',board);}catch{}}});
-function stageMedia(input,target,video=false) {
-  const file=input.files[0];if(!file)return;
-  const types=video?{'video/mp4':'mp4','video/quicktime':'mov','video/x-m4v':'m4v'}:{'image/jpeg':'jpg','image/png':'png',...(target==='poster_url'?{'image/webp':'webp'}:{})};
-  const extension=types[file.type];if(!extension || file.size>(video?20:5)*1024*1024)throw new Error(video?'Choose MP4/MOV/M4V under 20 MB.':'Choose an allowed image under 5 MB.');
-  pendingMedia[target]={file,extension,video};input.value='';dirty=true;updatePreview();renderMedia();tell('File selected. Click Save on this PC to keep a local copy, or publish to upload it.');
+field('pinterest_board_id').addEventListener('change',()=>{const board=field('pinterest_board_id').value.trim();if(!board || /^\d+$/.test(board)){lastBoard=board;try{localStorage.setItem('curated-studio-board',board);}catch{}}});
+async function stageMedia(files) {
+  if(!files.length)return;
+  const kinds=files.map(mediaKind);
+  const existing=kinds.includes('image')?mediaItems.filter(item=>!item.generated):mediaItems;
+  if(existing.filter(i=>i.kind==='image').length+kinds.filter(k=>k==='image').length>10)throw new Error('Use up to 10 photos per product.');
+  if(existing.filter(i=>i.kind==='video').length+kinds.filter(k=>k==='video').length>1)throw new Error('Use one video per product. Remove the current video to replace it.');
+  tell('Preparing your photos and video…');
+  const prepared=[];for(const file of files)prepared.push(await prepareMedia(file));
+  const next=[...existing,...prepared];
+  if(!next.some(i=>i.kind==='image')){
+    try{next.unshift(await posterFromVideo(next.find(i=>i.kind==='video').file));}
+    catch(error){mediaItems=next;dirty=true;syncMedia();renderMedia();throw error;}
+  }
+  mediaItems=next;dirty=true;syncMedia();renderMedia();tell('Media ready. The first photo is used as the poster for your website and Pinterest.');
 }
-for(const [id,target,video] of [['poster-file','poster_url',false],['cover-file','pin_image_url',false],['video-file','video_path',true]])$(id).addEventListener('change',()=>void locked(()=>stageMedia($(id),target,video)));
+$('media-files').addEventListener('change',()=>{const files=[...$('media-files').files];$('media-files').value='';void locked(()=>stageMedia(files));});
 function payload(published,validate=true) {
+  syncMedia();
   const values={};for(const name of ['title','description','category','poster_url','poster_alt','pin_media_type'])values[name]=field(name).value.trim();
   for(const name of ['pinterest_board_id','pin_image_url','video_path'])values[name]=field(name).value.trim() || null;
+  values.poster_alt=values.poster_alt || values.title;
+  values.images=mediaItems.filter(item=>item.kind==='image' && item.url).map(item=>({url:item.url,pin_url:item.pinUrl || item.url,alt:item.alt || values.poster_alt}));
   values.tags=field('tags').value.split(',').map(x=>x.trim()).filter(Boolean);values.featured=field('featured').checked;values.publish_to_pinterest=field('publish_to_pinterest').checked;values.published=published;
   values.stores=[...$('stores').children].map(row=>Object.fromEntries([...row.querySelectorAll('input')].map(input=>[input.dataset.store,input.value.trim()]))).filter(s=>s.name || s.url || s.note);
   if(!validate)return values;
   if(!values.title)throw new Error('Give your product a title.');
   if(values.tags.length>12 || values.tags.some(t=>t.length>40))throw new Error('Use up to 12 tags, with at most 40 characters each.');
-  if(values.publish_to_pinterest && !/^\d+$/.test(values.pinterest_board_id || ''))throw new Error('Add your Pinterest board ID, or turn off “Post to Pinterest” for now.');
+  if(values.pinterest_board_id && !/^\d+$/.test(values.pinterest_board_id))throw new Error('Use a numeric board ID, or leave it blank to choose automatically.');
   for(const s of values.stores){if(!s.name)throw new Error('Add a name for every store.');safeUrl(s.url);}
-  if(values.pin_image_url && !pendingMedia.pin_image_url)safeUrl(values.pin_image_url);
-  if(published){if(!values.description || !values.poster_alt || !values.stores.length)throw new Error('Publishing needs a description, image description, and at least one store link.');if(!pendingMedia.poster_url)safeUrl(values.poster_url);if(values.publish_to_pinterest && values.pin_media_type==='video' && !values.video_path && !pendingMedia.video_path)throw new Error('Select your video before publishing a video Pin.');}
+  if(values.pin_image_url)safeUrl(values.pin_image_url);
+  if(published){if(!values.description || !values.stores.length)throw new Error('Add a description and at least one store link.');if(!mediaItems.some(item=>item.kind==='image'))throw new Error('Add a photo or a video that can generate a poster.');}
   return values;
 }
 async function save(published) {
@@ -134,14 +146,20 @@ async function save(published) {
   if(!session)await connect();
   if(draftProject && draftProject!==connection.supabaseUrl)throw new Error('This draft belongs to a different Supabase project. Sign in to that project before saving it online.');
   if(!published && selected?.published && !confirm('Unpublish this product? Its public page will be removed on the next deployment. Existing Pins will remain.'))return;
+  // Check before uploading so an older backend cannot leave orphan media uploads.
+  try{await request('/rest/v1/products?select=id,images&limit=0');}
+  catch(error){if(error.code==='42703' || error.code==='PGRST204')throw new Error('Your draft is saved on this PC. This project needs its one-time gallery update before online publishing.');throw error;}
   payload(published);draftProject=connection.supabaseUrl;await saveLocal(false);
-  for(const [target,media] of Object.entries(pendingMedia)) {
-    if(media.uploadedUrl)continue;
-    const bucket=media.video?'product-videos':'product-images';const path=`${session.user.id}/${crypto.randomUUID()}.${media.extension}`;
-    tell(`Uploading ${media.file.name}… Your draft is saved on this PC.`);
-    await request(`/storage/v1/object/${bucket}/${path}`,{method:'POST',headers:{'Content-Type':media.file.type,'x-upsert':'false'},body:media.file});
-    field(target).value=media.video?path:`${connection.supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
-    media.uploadedUrl=field(target).value;await saveLocal(false);renderMedia();updatePreview();
+  for(const media of mediaItems) {
+    for(const [fileKey,urlKey] of media.kind==='video'?[['file','path']]:[['file','url'],['pinFile','pinUrl']]) {
+      if(media[urlKey] || !media[fileKey])continue;
+      const video=media.kind==='video';const file=media[fileKey];
+      const bucket=video?'product-videos':'product-images';const path=`${session.user.id}/${crypto.randomUUID()}.${video?media.extension:'jpg'}`;
+      tell(`Uploading ${file.name}… Your draft is saved on this PC.`);
+      await request(`/storage/v1/object/${bucket}/${path}`,{method:'POST',headers:{'Content-Type':file.type,'x-upsert':'false'},body:file});
+      media[urlKey]=video?path:`${connection.supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
+      syncMedia();await saveLocal(false);renderMedia();
+    }
   }
   const values=payload(published);const editing=selected;
   const route=editing?`/rest/v1/products?id=eq.${editing.id}&revision=eq.${editing.revision}`:'/rest/v1/products';
@@ -172,10 +190,24 @@ function showWorkspace() {
   if(!session){$('site-state').textContent='Connect to check';$('pin-state').textContent='Connect to check';$('load-more').hidden=true;}
 }
 function renderMedia() {
-  for(const [id,target] of [['poster-file','poster_url'],['cover-file','pin_image_url'],['video-file','video_path']]) {
-    const media=pendingMedia[target];$(`${id}-state`).textContent=media?`${media.file.name} · ${(media.file.size/1024/1024).toFixed(1)} MB · ${media.uploadedUrl?'Uploaded; local copy kept':'Selected for next upload'}`:'';
-    document.querySelector(`[data-clear-media="${target}"]`).hidden=!media;
+  previewUrls.forEach(URL.revokeObjectURL);previewUrls=[];$('media-list').replaceChildren();
+  const poster=mediaItems.find(item=>item.kind==='image');
+  for(const item of mediaItems) {
+    const card=document.createElement('div');card.className='media-card';card.dataset.mediaId=item.id;
+    if(item.kind==='image' || item.file){
+      const preview=document.createElement(item.kind==='image'?'img':'video');
+      if(item.file){const url=URL.createObjectURL(item.file);previewUrls.push(url);preview.src=url;}else preview.src=item.url;
+      if(item.kind==='image')preview.alt=item===poster?'Product poster':'Product photo';else{preview.controls=true;preview.preload='metadata';}
+      card.append(preview);
+    }
+    const label=document.createElement('small');label.textContent=item.kind==='video'?'Video Pin':item===poster?'Poster': 'Photo';card.append(label);
+    if(item.kind==='image' && item!==poster){const choose=document.createElement('button');choose.type='button';choose.textContent='Use as poster';choose.addEventListener('click',()=>{if(busy)return;mediaItems=[item,...mediaItems.filter(m=>m!==item)];dirty=true;syncMedia();renderMedia();});card.append(choose);}
+    const remove=document.createElement('button');remove.type='button';remove.textContent='Remove';remove.setAttribute('aria-label',`Remove ${item.file?.name || label.textContent}`);
+    remove.addEventListener('click',()=>void locked(async()=>{const next=mediaItems.filter(m=>m!==item);if(!next.some(m=>m.kind==='image') && next.some(m=>m.kind==='video')){const video=next.find(m=>m.kind==='video');if(!video.file)throw new Error('Add another photo before removing this poster.');next.unshift(await posterFromVideo(video.file));}mediaItems=next;dirty=true;syncMedia();renderMedia();}));card.append(remove);
+    $('media-list').append(card);
   }
+  const imageCount=mediaItems.filter(i=>i.kind==='image').length;
+  $('media-summary').textContent=mediaItems.length?`${imageCount} photos${mediaItems.some(i=>i.kind==='video')?' + video. Pinterest uses the video; photos appear on your website.':imageCount>5?'. All photos appear on your website; Pinterest uses the first 5.':'. Photos appear on your website and Pinterest.'}`:'';
 }
 function renderLocalList() {
   $('local-list').replaceChildren();$('local-count').textContent=String(localDrafts.length);$('delete-local').hidden=!localVersion;
@@ -184,7 +216,7 @@ function renderLocalList() {
 }
 async function refreshLocal(){localDrafts=await listDrafts();renderLocalList();}
 async function saveLocal(announce=true) {
-  const draft={id:createId,project:draftProject,siteUrl:connection?.siteUrl || '',product:selected || null,values:payload(!!selected?.published,false),media:pendingMedia};
+  const draft={id:createId,project:draftProject,siteUrl:connection?.siteUrl || '',product:selected || null,values:payload(!!selected?.published,false),media:mediaItems};
   let saved;
   try{saved=await putDraft(draft,localVersion);}catch(error){throw new Error(`Could not save on this PC. ${error.name==='QuotaExceededError'?'Browser storage is full. Free space or remove old drafts.':error.message} Your current form is still open.`);}
   localVersion=saved.version;dirty=false;await refreshLocal();
@@ -193,7 +225,6 @@ async function saveLocal(announce=true) {
 $('connect-online').addEventListener('click',()=>void locked(async()=>{await connect();tell('Connected. Your current draft is ready.');}));
 $('save-local').addEventListener('click',()=>void locked(()=>saveLocal()));
 $('delete-local').addEventListener('click',()=>{if(!confirm('Delete this local draft and its saved files? Any product already in Supabase will remain.'))return;void locked(async()=>{await deleteDraft(createId,localVersion);await refreshLocal();fill();tell('Local draft deleted.');});});
-for(const button of document.querySelectorAll('[data-clear-media]'))button.addEventListener('click',()=>{delete pendingMedia[button.dataset.clearMedia];dirty=true;renderMedia();updatePreview();});
 window.addEventListener('focus',()=>{if(!busy)void refreshLocal().catch(()=>{});});
 try {
   const defaults=await (await fetch('/config.json')).json();connection=readConnection(defaults);

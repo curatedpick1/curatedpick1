@@ -19,25 +19,19 @@
         <div class="editor-heading"><div><p class="eyebrow" id="editor-label">NEW PRODUCT</p><h2 id="editor-title">New product</h2></div><span id="job-state" class="badge">Draft</span></div>
         <label>Title<input name="title" maxlength="100" required placeholder="Product name"></label>
         <label>Description<textarea name="description" maxlength="440" rows="3" placeholder="What makes it useful?"></textarea><small>Used on your website and Pin.</small></label>
-        <div class="field-grid">
-          <label>Pin format<select name="pin_media_type"><option value="image">Image</option><option value="video">Video</option></select></label>
-          <label>Pinterest board ID<input name="pinterest_board_id" inputmode="numeric" pattern="[0-9]*" placeholder="Saved after first use"></label>
-        </div>
         <section class="form-section">
-          <div class="section-title"><h3>Website poster / Pin image</h3><span>JPG or PNG · up to 5 MB</span></div>
-          <div class="poster-layout"><div class="poster-preview"><img id="poster-preview" alt="Poster preview" hidden><span id="poster-placeholder">Image preview</span></div><div>
-            <label>Choose image<input id="poster-file" type="file" accept="image/jpeg,image/png"></label><small id="poster-file-state"></small><button type="button" data-clear-media="poster_url" hidden>Remove selected image</button>
-            <label>Image description<input name="poster_alt" maxlength="500" placeholder="Briefly describe what is shown"></label>
-          </div></div>
-          <div id="video-fields" hidden><label>Choose video<input id="video-file" type="file" accept="video/mp4,video/quicktime,video/x-m4v"></label><small>MP4, MOV or M4V · up to 20 MB</small><small id="video-file-state"></small><button type="button" data-clear-media="video_path" hidden>Remove selected video</button></div>
-          <details><summary>Use a different image for Pinterest</summary><label>Pin image / video cover<input id="cover-file" type="file" accept="image/jpeg,image/png"></label><small id="cover-file-state"></small><button type="button" data-clear-media="pin_image_url" hidden>Remove selected cover</button><small>Otherwise Pinterest uses your website poster.</small></details>
+          <div class="section-title"><h3>Photos &amp; video</h3><span>Up to 10 photos + 1 video</span></div>
+          <label class="media-upload">Add files<input id="media-files" type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/x-m4v"></label>
+          <small>Upload photos, a video, or both. The first photo is your poster. Sizes are prepared automatically. Up to 20 MB per file.</small>
+          <div id="media-list" class="media-list" aria-label="Product media"></div>
+          <small id="media-summary" role="status"></small>
+          <input type="hidden" name="poster_url"><input type="hidden" name="pin_image_url"><input type="hidden" name="video_path"><input type="hidden" name="pin_media_type">
         </section>
         <section class="form-section"><div class="section-title"><h3>Affiliate links</h3><button type="button" id="add-store">+ Add store</button></div><div id="stores"></div></section>
-        <details class="optional-fields"><summary>Optional details &amp; existing media</summary>
+        <details class="optional-fields"><summary>Optional details</summary>
           <div class="field-grid"><label>Category<input name="category" list="categories" maxlength="40" value="Home & living"><datalist id="categories"><option>Home & living</option><option>Tech & desk</option><option>Kitchen & dining</option><option>On the go</option><option>Style & essentials</option></datalist></label><label>Tags<input name="tags" placeholder="desk, lighting"><small>Up to 12, separated by commas.</small></label></div>
-          <label>Existing poster URL<input name="poster_url" type="url" placeholder="https://…"></label>
-          <label>Existing Pin image / cover URL<input name="pin_image_url" type="url" placeholder="https://…"></label>
-          <label>Existing private video path<input name="video_path" placeholder="Optional: reuse an uploaded video"></label>
+          <label>Pinterest board ID — optional<input name="pinterest_board_id" inputmode="numeric" pattern="[0-9]*" placeholder="Use the account’s default board"><small>Leave blank to choose automatically from your connected account.</small></label>
+          <label>Image description — optional<input name="poster_alt" maxlength="500" placeholder="Uses the product title if left blank"></label>
           <label class="toggle"><input name="featured" type="checkbox"> Feature on homepage</label>
         </details>
         <div class="save-bar"><div><label class="toggle"><input name="publish_to_pinterest" type="checkbox" checked> Post to Pinterest</label><p id="save-hint">Saved drafts stay on this PC.</p></div><div class="actions"><button type="button" id="save-local">Save on this PC</button><button class="primary" id="publish" type="submit">Publish product</button></div></div>

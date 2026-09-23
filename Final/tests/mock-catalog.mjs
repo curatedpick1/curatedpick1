@@ -8,6 +8,7 @@ globalThis.fetch = async (input, init) => {
     id: '00000000-0000-4000-8000-000000000001', slug: 'reading-lamp', title: 'Lamp <script>alert(1)</script>',
     description: 'A fixture used to verify production rendering.', category: 'Home', tags: ['lighting'],
     poster_url: 'https://images.example.com/lamp.jpg', poster_alt: 'A reading lamp', featured: true,
+    images:[{url:'https://images.example.com/lamp.jpg',alt:'A reading lamp'},{url:'https://images.example.com/detail.jpg',alt:'Lamp detail'}],
     stores: [{ name: 'Amazon', url: 'https://amazon.com/dp/B000000001?tag=test-20' }, { name: 'AliExpress', url: 'https://aliexpress.com/item/10000000001.html', note: 'Check the exact variant' }], revision: 2, created_at: '2026-09-08T10:00:00Z',
   }] });
 };

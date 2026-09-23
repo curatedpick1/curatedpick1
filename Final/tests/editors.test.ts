@@ -17,6 +17,7 @@ test('local editors have bounded product/media access; outsiders and removed edi
       grant usage on schema storage to anon,authenticated;grant all on storage.objects to anon,authenticated;
       insert into auth.users values ('${editor}'),('${stranger}');`);
     for(const name of ['202609080001_catalog.sql','202609080002_storage.sql','202609130003_local_editors.sql','202609130003_local_editors.sql'])await db.exec(await readFile(new URL(`../supabase/migrations/${name}`,import.meta.url),'utf8'));
+    for(let run=0;run<2;run++)await db.exec(await readFile(new URL('../supabase/migrations/202609230004_product_media.sql',import.meta.url),'utf8'));
     await db.query('insert into catalog_editors(user_id) values ($1)',[editor]);
     await db.exec(`set role authenticated;set request.jwt.claim.sub='${stranger}'`);
     assert.equal((await db.query('select * from products')).rows.length,0);
@@ -28,7 +29,11 @@ test('local editors have bounded product/media access; outsiders and removed edi
     const product=(await db.query<{id:string;revision:number}>("insert into products(title) values ('Local studio draft') returning id,revision")).rows[0];
     assert.equal(product.revision,1);
     const valid=JSON.stringify([{name:'Amazon',url:'https://amazon.com/dp/TEST?tag=example-20'}]);
-    await db.query("update products set published=true,description='Description',poster_url='https://images.example.com/a.jpg',poster_alt='Poster',stores=$1::jsonb,pinterest_board_id='123',publish_to_pinterest=true where id=$2",[valid,product.id]);
+    await db.query("update products set published=true,description='Description',poster_url='https://images.example.com/a.jpg',poster_alt='Poster',stores=$1::jsonb,pinterest_board_id=null,publish_to_pinterest=true,images=$3::jsonb where id=$2",[valid,product.id,JSON.stringify([{url:'https://images.example.com/a.jpg',pin_url:'https://images.example.com/pin.jpg',alt:'Poster'},{url:'https://images.example.com/b.jpg',alt:'Another view'}])]);
+    const catalog=(await db.query<{get_catalog:{products:{images:unknown[]}[]}}>('select get_catalog()')).rows[0].get_catalog;
+    assert.equal(catalog.products[0].images.length,2);
+    await assert.rejects(()=>db.query("update products set images='[{\"url\":\"javascript:alert(1)\"}]'::jsonb"),/check constraint/);
+    await assert.rejects(()=>db.query("update products set pinterest_board_id='not-a-board'"),/check constraint/);
     assert.equal((await db.query<{get_editor_status:{jobs:unknown[]}}>('select get_editor_status()')).rows[0].get_editor_status.jobs.length,1);
     for(const table of ['catalog_editors','pinterest_tokens','pinterest_jobs','catalog_state'])await assert.rejects(()=>db.query(`select * from ${table}`),/permission denied/);
     await assert.rejects(()=>db.query('update products set revision=1'),/permission denied/);

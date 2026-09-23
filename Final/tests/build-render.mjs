@@ -14,7 +14,7 @@ for (const mode of ['live', 'empty', 'failure']) {
   assert.ok(!home.includes('Preview collection'));
   if (mode === 'live') {
     const html = readFileSync(`${folder}/products/reading-lamp/index.html`, 'utf8');
-    assert.ok(html.includes('<h1>Lamp &lt;script&gt;alert(1)&lt;/script&gt;</h1>'));
+    assert.match(html,/<h1\b[^>]*>Lamp &lt;script&gt;alert\(1\)&lt;\/script&gt;<\/h1>/);
     assert.ok(html.includes('&lt;script&gt;alert(1)&lt;/script&gt;'));
     assert.ok(html.includes('rel="sponsored nofollow noopener noreferrer"'));
     assert.ok(html.includes('https://amazon.com/dp/B000000001?tag=test-20'));
@@ -22,6 +22,8 @@ for (const mode of ['live', 'empty', 'failure']) {
     assert.ok(html.includes('data-product-revision="2"'));
     assert.ok(html.includes('https://shop.test/products/reading-lamp/'));
     assert.ok(!html.includes('private-test-key'));
+    assert.ok(html.includes('id="gallery-main"'));
+    assert.ok(html.includes('data-gallery-url="https://images.example.com/detail.jpg"'));
   } else { assert.ok(home.includes('The first finds are on their way.')); assert.deepEqual(manifest.products, {}); }
 }
 console.log('PASS: live static store buttons, escaped content, canonical links/version marker, empty catalog, and failed API stops deployment. Fixtures are isolated under ignored test-results/.');

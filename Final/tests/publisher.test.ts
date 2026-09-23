@@ -9,9 +9,9 @@ const product: Product & Record<string, any> = {
   published: true, publish_to_pinterest: true, pinterest_board_id: '123', pin_media_type: 'image', pin_image_url: null, video_path: null,
 };
 const config: Config = { supabaseUrl: 'https://project.supabase.co', serviceKey: 'private-test-key', siteUrl: 'https://shop.example.com', deployHook: 'https://deploy.example.com/hook', enabled: true, apiEnv: 'sandbox', standardAccess: false, appId: 'id', appSecret: 'secret' };
-function setup(options: { live?: boolean; pinResult?: number | 'timeout'; video?: boolean; processing?: boolean; htmlValid?: boolean; locked?: boolean } = {}) {
+function setup(options: { live?: boolean; pinResult?: number | 'timeout'; video?: boolean; processing?: boolean; htmlValid?: boolean; locked?: boolean; noBoard?: boolean; noPublicBoards?: boolean } = {}) {
   let job: Record<string, any> = { product_id: product.id, state: 'pending', pin_id: null, media_id: null, media_path: null, media_started_at: null, attempts: 0 };
-  const current = { ...product, ...(options.video ? { pin_media_type: 'video', video_path: 'lamp.mp4' } : {}) };
+  const current = { ...product, ...(options.video ? { pin_media_type: 'video', video_path: 'lamp.mp4' } : {}),...(options.noBoard?{pinterest_board_id:null}:{}) };
   if (options.processing) job = { ...job, state: 'media_processing', media_id: 'media-123', media_path: 'lamp.mp4', media_started_at: new Date().toISOString() };
   const calls: { url: string; init: RequestInit; body: any }[] = [];
   const fetcher = (async (input: string | URL | Request, init: RequestInit = {}) => {
@@ -37,6 +37,7 @@ function setup(options: { live?: boolean; pinResult?: number | 'timeout'; video?
     if (url.includes('/storage/v1/object/authenticated')) return new Response(new Uint8Array([1,2,3]), { headers: { 'Content-Type': 'video/mp4' } });
     if (url.includes('pinterest-media-upload')) return new Response(null, { status: 204 });
     if (url.endsWith('/media/media-123')) return ok({ status: 'succeeded' });
+    if(url.includes('/boards?'))return ok({items:options.noPublicBoards?[{id:'777',privacy:'SECRET'}]:[{id:'777',privacy:'SECRET'},{id:'456',privacy:'PUBLIC'}]});
     if (url.endsWith('/pins')) {
       if (options.pinResult === 'timeout') throw new Error('Request timed out');
       if (typeof options.pinResult === 'number') return new Response('', { status: options.pinResult });
@@ -92,4 +93,27 @@ test('no Pin is sent for a fallback HTML page, disabled publisher, missing appro
     const mock = setup(options); await runPublisher(settings, mock.fetcher);
     assert.ok(!mock.calls.some(c => c.url.endsWith('/pins')));
   }
+});
+test('a blank product board chooses a public account board, or stays queued if none exists',async()=>{
+  const found=setup({noBoard:true});
+  assert.equal((await runPublisher(config,found.fetcher)).status,'published');
+  assert.equal(found.calls.find(c=>c.url.endsWith('/pins'))!.body.board_id,'456');
+  const absent=setup({noBoard:true,noPublicBoards:true});
+  assert.equal((await runPublisher(config,absent.fetcher)).status,'waiting_for_board');
+  assert.equal(absent.job.state,'pending');
+  assert.ok(!absent.calls.some(c=>c.url.endsWith('/pins')));
+  const configured=setup({noBoard:true});
+  await runPublisher({...config,defaultBoardId:'888'},configured.fetcher);
+  assert.equal(configured.calls.find(c=>c.url.endsWith('/pins'))!.body.board_id,'888');
+  assert.ok(!configured.calls.some(c=>c.url.includes('/boards?')));
+});
+test('photo Pins use up to five prepared images; mixed uploads use the video and shared poster',()=>{
+  const images=Array.from({length:7},(_,i)=>({url:`https://images.example.com/${i}.jpg`,pin_url:`https://images.example.com/${i}-pin.jpg`}));
+  const photos=pinPayload({...product,images} as any,config.siteUrl);
+  assert.equal(photos.media_source.source_type,'multiple_image_urls');
+  assert.equal(photos.media_source.items!.length,5);
+  assert.equal(photos.media_source.items![0].url,images[0].pin_url);
+  const video=pinPayload({...product,images,pin_media_type:'video',pin_image_url:images[0].pin_url} as any,config.siteUrl,'123');
+  assert.equal(video.media_source.source_type,'video_id');
+  assert.equal(video.media_source.cover_image_url,images[0].pin_url);
 });

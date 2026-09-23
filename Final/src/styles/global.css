@@ -75,7 +75,7 @@
   .pick { min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 15px; transition: border-color .2s, transform .2s; }
   .pick-link { display: flex; flex-direction: column; height: 100%; padding: 10px; border-radius: 15px; }
   .pick-image { position: relative; overflow: hidden; aspect-ratio: 1.48; border-radius: 9px; background: var(--sage); }
-  .pick-image img { width: 100%; height: 100%; object-fit: cover; transition: transform .45s cubic-bezier(.2,.7,.2,1); }
+  .pick-image img { width: 100%; height: 100%; object-fit: contain; background: white; transition: transform .45s cubic-bezier(.2,.7,.2,1); }
   .pick-badge { position: absolute; top: 10px; left: 10px; border-radius: 30px; padding: 4px 9px; font-size: 9px; font-weight: 750; background: #26fedc; color: #054639; }
   .pick-body { display: flex; flex-direction: column; flex: 1; padding: 13px 5px 2px; }
   .pick-meta { font-size: 9px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); font-weight: 600; }
