@@ -19,6 +19,7 @@ const routes = new Map([
   ['/', ['studio/index.html','text/html; charset=utf-8']],
   ['/app.js', ['studio/app.js','text/javascript; charset=utf-8']],
   ['/drafts.js', ['studio/drafts.js','text/javascript; charset=utf-8']],
+  ['/media.js', ['studio/media.js','text/javascript; charset=utf-8']],
   ['/style.css', ['studio/style.css','text/css; charset=utf-8']],
   ['/logo.svg', ['public/favicon.svg','image/svg+xml']],
   ['/font.woff2', ['node_modules/@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2','font/woff2']],
@@ -27,7 +28,7 @@ const getSession = auth.createStudioSession(publicConfig, new URL('../.private/s
 const server = createServer(async (req,res) => {
   const origin = 'http://127.0.0.1:4333';
   const headers = { 'X-Curated-Studio':'1', 'Cache-Control':'no-store', 'X-Content-Type-Options':'nosniff', 'Referrer-Policy':'no-referrer',
-    'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https: blob:; connect-src 'self' https://*.supabase.co; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" };
+    'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https: blob:; media-src blob:; connect-src 'self' https://*.supabase.co; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" };
   if (req.headers.host !== '127.0.0.1:4333' || (req.headers.origin && req.headers.origin !== origin) || req.headers['sec-fetch-site'] === 'cross-site') {res.writeHead(403,headers).end('Use http://127.0.0.1:4333');return;}
   const path = new URL(req.url,origin).pathname;
   if (path === '/session') {

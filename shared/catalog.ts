@@ -1,4 +1,5 @@
 export interface StoreLink { name: string; url: string; note?: string }
+export interface ProductImage { url: string; pin_url?: string; alt?: string }
 export interface Product {
   id: string;
   slug: string;
@@ -8,6 +9,7 @@ export interface Product {
   tags: string[];
   poster_url: string;
   poster_alt: string;
+  images?: ProductImage[];
   stores: StoreLink[];
   featured: boolean;
   revision: number;
@@ -31,6 +33,10 @@ export function validateProduct(value: unknown, demo = false): Product {
   if (!Array.isArray(p.tags) || p.tags.length > 12 || p.tags.some(t => typeof t !== 'string' || t.length > 40)) throw new Error(`Invalid tags: ${p.slug}`);
   if (!demo || !p.poster_url.startsWith('/demo/')) httpsUrl(p.poster_url);
   if (typeof p.poster_alt !== 'string' || !p.poster_alt.trim()) throw new Error(`Add image alt text: ${p.slug}`);
+  if(p.images !== undefined){
+    if(!Array.isArray(p.images) || p.images.length>10)throw new Error('Use up to 10 product photos');
+    for(const image of p.images){httpsUrl(image.url);if(image.pin_url)httpsUrl(image.pin_url);if(image.alt!==undefined && (typeof image.alt!=='string' || image.alt.length>500))throw new Error('Invalid image description');}
+  }
   if (!Array.isArray(p.stores) || p.stores.length > 8 || (!demo && !p.stores.length)) throw new Error(`Add 1–8 store links: ${p.slug}`);
   for (const store of p.stores) {
     if (!store || typeof store.name !== 'string' || !store.name.trim() || store.name.length > 40 || (store.note && (typeof store.note !== 'string' || store.note.length > 120))) throw new Error(`Invalid store: ${p.slug}`);

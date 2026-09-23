@@ -3,9 +3,9 @@ import { httpsUrl, productUrl, validateProduct, type Product } from '../../../sh
 export interface Config {
   supabaseUrl: string; serviceKey: string; siteUrl: string; deployHook: string;
   enabled: boolean; apiEnv: 'sandbox' | 'production'; standardAccess: boolean;
-  appId: string; appSecret: string;
+  appId: string; appSecret: string; defaultBoardId?: string;
 }
-type PrivateProduct = Product & { published: boolean; publish_to_pinterest: boolean; pinterest_board_id: string; pin_media_type: 'image' | 'video'; pin_image_url: string | null; video_path: string | null };
+type PrivateProduct = Product & { published: boolean; publish_to_pinterest: boolean; pinterest_board_id: string | null; pin_media_type: 'image' | 'video'; pin_image_url: string | null; video_path: string | null };
 type Job = { product_id: string; state: string; pin_id: string | null; media_id: string | null; media_path: string | null; media_started_at: string | null; attempts: number };
 type Manifest = { revision: number; demo: boolean; products: Record<string, { slug: string; revision: number }> };
 type Tokens = { api_env: string; access_token: string; refresh_token: string; expires_at: string; refreshed_at: string };
@@ -15,15 +15,17 @@ const MAX_VIDEO_BYTES = 20 * 1024 * 1024;
 
 export function pinPayload(product: PrivateProduct, siteUrl: string, mediaId?: string) {
   validateProduct(product);
-  if (!/^\d+$/.test(product.pinterest_board_id)) throw new Error('A Pinterest board ID is required');
+  if (!/^\d+$/.test(product.pinterest_board_id || '')) throw new Error('A Pinterest board must be resolved before posting');
   if (product.pin_media_type === 'video' && !mediaId) throw new Error('Video upload must complete before creating its Pin');
   const image = httpsUrl(product.pin_image_url || product.poster_url);
+  const images=(product.images || []).slice(0,5);
   return {
     board_id: product.pinterest_board_id, title: product.title,
     description: `${product.description}\n\n${disclosure}`,
     alt_text: product.poster_alt.slice(0, 500), link: productUrl(siteUrl, product.slug),
     media_source: product.pin_media_type === 'video'
       ? { source_type: 'video_id', media_id: mediaId, cover_image_url: image }
+      : images.length>1?{source_type:'multiple_image_urls',index:0,items:images.map(photo=>({url:httpsUrl(photo.pin_url || photo.url),title:product.title,link:productUrl(siteUrl,product.slug)}))}
       : { source_type: 'image_url', url: image },
   };
 }
@@ -131,6 +133,25 @@ export async function runPublisher(config: Config, fetcher: typeof fetch = fetch
       token = fresh.access_token;
     }
     const auth = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+    let boardId=product.pinterest_board_id || config.defaultBoardId;
+    if(!boardId){
+      let bookmark: string | undefined;
+      do {
+        const query=new URLSearchParams({page_size:'100',...(bookmark?{bookmark}:{})});
+        const response=await request(`${api}/boards?${query}`,{headers:auth},10000);
+        if(!response.ok)throw new ApiError(response.status,'Pinterest board lookup');
+        const boards=await response.json();
+        boardId=boards.items?.find((board:{id:string;privacy:string})=>board.privacy==='PUBLIC' && /^\d+$/.test(board.id))?.id;
+        bookmark=typeof boards.bookmark==='string'?boards.bookmark:undefined;
+        if(Date.now()-started>30000)break;
+      }while(!boardId && bookmark);
+      if(!boardId){
+        await db(`pinterest_jobs?product_id=eq.${product.id}`,'PATCH',{last_error:'No public Pinterest board is available yet. Create one or set the account default board; this Pin stays queued.'});
+        return {status:'waiting_for_board',deployment};
+      }
+    }
+    // Only this outgoing Pin needs a board; saving a product does not.
+    product={...product,pinterest_board_id:boardId};
     let mediaId = currentJob.media_id;
     if (product.pin_media_type === 'video') {
       if (!product.video_path || !/^[A-Za-z0-9_/-]+\.(mp4|mov|m4v)$/.test(product.video_path) || product.video_path.includes('..')) throw new Error('Use a valid private product-videos storage path');

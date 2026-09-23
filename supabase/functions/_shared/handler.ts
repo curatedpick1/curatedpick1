@@ -20,6 +20,7 @@ export function createHandler(env: (name: string) => string, fetcher: typeof fet
         deployHook: env('SITE_DEPLOY_HOOK'), enabled: env('PINTEREST_PUBLISHING_ENABLED') === 'true',
         apiEnv: env('PINTEREST_API_ENV') === 'production' ? 'production' : 'sandbox',
         standardAccess: env('PINTEREST_STANDARD_ACCESS') === 'true', appId: env('PINTEREST_APP_ID'), appSecret: env('PINTEREST_APP_SECRET'),
+        defaultBoardId: env('PINTEREST_DEFAULT_BOARD_ID'),
       }, fetcher);
       return new Response(JSON.stringify(result), { status: result.status === 'error' ? 502 : 200, headers });
     } catch { return new Response(JSON.stringify({ error: 'Publisher configuration or database is unavailable. Check function secrets and migrations.' }), { status: 500, headers }); }

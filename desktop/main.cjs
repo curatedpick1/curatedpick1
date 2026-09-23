@@ -17,6 +17,7 @@ const routes = new Map([
   ['/', ['index.html', 'text/html; charset=utf-8']],
   ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
   ['/drafts.js', ['drafts.js', 'text/javascript; charset=utf-8']],
+  ['/media.js', ['media.js', 'text/javascript; charset=utf-8']],
   ['/style.css', ['style.css', 'text/css; charset=utf-8']],
   ['/logo.svg', ['logo.svg', 'image/svg+xml']],
   ['/font.woff2', ['font.woff2', 'font/woff2']],
@@ -31,7 +32,7 @@ else {
     const site = new URL(config.siteUrl).origin;
     const getSession = createStudioSession(config, path.join(__dirname, 'private', 'editor.json'));
     const headers = {
-      'Content-Security-Policy': `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https: blob:; connect-src 'self' ${new URL(config.supabaseUrl).origin}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
+      'Content-Security-Policy': `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https: blob:; media-src blob:; connect-src 'self' ${new URL(config.supabaseUrl).origin}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
       'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store',
     };
     protocol.handle('curated', async request => {

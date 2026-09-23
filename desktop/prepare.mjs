@@ -9,7 +9,7 @@ const privateDirectory = new URL('./private/', import.meta.url);
 await mkdir(privateDirectory, {recursive: true});
 await mkdir(assets, {recursive: true});
 // Public files and one scoped editor credential; no service or publisher secrets.
-for (const name of ['index.html', 'app.js', 'drafts.js', 'style.css']) {
+for (const name of ['index.html', 'app.js', 'drafts.js', 'media.js', 'style.css']) {
   await copyFile(new URL(`studio/${name}`, root), new URL(name, assets));
 }
 await copyFile(new URL('public/favicon.svg', root), new URL('logo.svg', assets));

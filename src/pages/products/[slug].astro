@@ -9,12 +9,16 @@ export async function getStaticPaths() {
   return catalog.products.map(product => ({ params: { slug: product.slug }, props: { product, related: relatedProducts(product, catalog.products), demo: catalog.demo } }));
 }
 const { product, related, demo } = Astro.props;
+const photos=product.images?.length?product.images:[{url:product.poster_url,alt:product.poster_alt}];
 ---
 <Layout title={`${product.title} — The Curated Pick`} description={product.description} image={product.poster_url} demo={demo}>
   <div class="detail-toolbar wrap"><a href="/#discover" class="back-link"><Icon name="back" size={17} /> Back to the finds</a><div><button class="share-button" id="share-product"><Icon name="share" size={16} /> Share find</button><span class="sr-only share-status" id="share-status" role="status"></span></div></div>
   <div class="share-fallback wrap" id="share-fallback" hidden><label for="share-url">Copy this product link to share it</label><input id="share-url" type="url" readonly /></div>
   <section class="product-detail wrap" data-product-id={product.id} data-product-revision={product.revision}>
-    <div class="detail-image"><img src={product.poster_url} alt={product.poster_alt} width="900" height="900" fetchpriority="high" /><span class="detail-image-note">A closer look</span></div>
+    <div class="product-gallery">
+      <div class="detail-image"><img id="gallery-main" src={product.poster_url} alt={product.poster_alt} width="1200" height="1500" fetchpriority="high" /><span class="detail-image-note">A closer look</span></div>
+      {photos.length>1 && <div class="gallery-thumbs" aria-label="Product photos">{photos.map((photo,index)=><button type="button" data-gallery-url={photo.url} data-gallery-alt={photo.alt || product.poster_alt} aria-label={`Show photo ${index+1}`} aria-pressed={photo.url===product.poster_url}><img src={photo.url} alt="" width="80" height="100" loading="lazy" /></button>)}</div>}
+    </div>
     <div class="detail-copy"><a class="eyebrow category-link" href={`/?category=${encodeURIComponent(product.category)}#discover`}>{product.category} <Icon name="arrow" size={14} /></a><h1>{product.title}</h1><p class="product-description">{product.description}</p>
       <div class="store-section"><div class="store-heading"><h2>Like it? Choose your store.</h2><p>Check current prices, options & delivery.</p></div>
         {product.stores.length ? <div class="store-list">{product.stores.map((store) => <a href={store.url} class="store-button" target="_blank" rel="sponsored nofollow noopener noreferrer"><span class="store-monogram" aria-hidden="true">{store.name.slice(0, 1).toUpperCase()}</span><span class="store-label"><strong>View on {store.name}</strong><small>{store.note || merchantHost(store.url)}</small></span><Icon name="arrow" size={20} /></a>)}</div> : <div class="store-empty"><p>{demo ? 'Example store choices' : 'Store links are coming soon.'}</p><span>{demo ? 'These sample buttons are inactive. Your actual store links will appear here after setup.' : 'Explore more finds while we finish this one.'}</span></div>}
@@ -28,6 +32,11 @@ const { product, related, demo } = Astro.props;
   {related.length > 0 && <section class="related-section wrap" aria-labelledby="related-title"><div class="section-heading"><div><p class="eyebrow">KEEP EXPLORING</p><h2 id="related-title">You might like these too</h2></div><a class="text-link" href="/#discover">View all finds <Icon name="right" size={16} /></a></div><div class="product-grid related-grid">{related.map((pick, index) => <ProductCard product={pick} index={index + 2} />)}</div></section>}
 </Layout>
 <script>
+  for(const thumbnail of document.querySelectorAll<HTMLButtonElement>('[data-gallery-url]'))thumbnail.addEventListener('click',()=>{
+    const main=document.querySelector<HTMLImageElement>('#gallery-main');if(!main)return;
+    main.src=thumbnail.dataset.galleryUrl!;main.alt=thumbnail.dataset.galleryAlt || '';
+    for(const button of document.querySelectorAll('[data-gallery-url]'))button.setAttribute('aria-pressed',String(button===thumbnail));
+  });
   const button = document.querySelector<HTMLButtonElement>('#share-product');
   const status = document.querySelector('#share-status');
   button?.addEventListener('click', async () => {
@@ -48,3 +57,6 @@ const { product, related, demo } = Astro.props;
     }
   });
 </script>
+<style>
+  .product-gallery{position:sticky;top:95px;min-width:0}.product-gallery .detail-image{position:relative;top:auto}.product-gallery .detail-image img{aspect-ratio:4/5;object-fit:contain;background:white}.gallery-thumbs{display:flex;gap:10px;overflow-x:auto;padding:12px 2px}.gallery-thumbs button{flex:0 0 70px;border:2px solid transparent;border-radius:8px;padding:3px;background:white;cursor:pointer}.gallery-thumbs button[aria-pressed=true]{border-color:var(--green)}.gallery-thumbs img{display:block;width:100%;height:80px;object-fit:contain}.gallery-thumbs button:focus-visible{outline:2px solid var(--green);outline-offset:2px}@media(max-width:650px){.product-gallery{position:static}}
+</style>
