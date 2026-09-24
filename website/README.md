@@ -1,6 +1,6 @@
 # The Curated Pick — Website
 
-A standalone affiliate discovery website. Add a product once in Supabase, publish its page, then automatically publish its image or video Pin. Visitors choose a store and can keep exploring related products.
+A standalone affiliate discovery website. Add a product once in Supabase; the live site reads it immediately and the publisher can post its image or video Pin. Visitors choose a store and can keep exploring related products.
 
 This folder contains the public storefront, Supabase backend, and shared Studio form. The separate Windows desktop shell is in `../desktop-app`.
 
@@ -31,24 +31,24 @@ npm run test:build
 npm run build:demo
 ```
 
-`npm run build` is the real production build: it requires the public Supabase read key and real `SITE_URL`, and fails if the catalog cannot be fetched. It never silently replaces your products with demo data. `test:build` writes only to ignored `test-results/`.
+`npm run build` prepares the Cloudflare Worker. Catalog data is fetched when a visitor requests a page, not during the build. `npm run test:build` checks the worker build output.
 
 ## Included
 
-- Static HTML product pages, search, categories, permanent URLs, and product image metadata.
+- Server-rendered product pages, search, categories, permanent URLs, and product image metadata, refreshed from Supabase on each request.
 - Multiple affiliate store buttons; related picks ranked by category and shared tags.
 - Separate website posters, Pinterest images/video covers, and private video staging.
 - Supabase schema, draft validation, private tables, public published-only snapshot, and storage rules.
-- A scheduled publisher: deploy first, check the exact live product version, then post a Pin.
+- A scheduled publisher: verify the exact live product page, then post a Pin. Product updates do not rebuild the website.
 - OAuth connection script, rotating token storage, duplicate prevention, and failure recovery.
 - Disclosure, privacy, about, 404, sitemap, and robots pages.
-- Vercel configuration and Cloudflare Pages instructions. No paid AI API or automation subscription.
+- Cloudflare Workers configuration and deployment instructions. No paid AI API or automation subscription.
 
 No accounts, public content editor, wishlist, reviews, checkout, analytics scripts, auto-redirects, fabricated prices, or live-price claims.
 
 ## Hosting choice
 
-**Vercel Hobby does not cover an affiliate-link business.** Vercel identifies sites primarily for affiliate linking as commercial. Use Vercel Pro if you choose Vercel; use **Cloudflare Pages Free** to keep hosting at $0 within its limits. Both can build this static project unchanged. [Vercel fair-use rules](https://vercel.com/docs/limits/fair-use-guidelines)
+Use **Cloudflare Workers Free** for the real-time site. Its free tier currently allows 100,000 dynamic requests per day. Static assets remain served separately. [Cloudflare Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/)
 
 ## What still needs your accounts
 

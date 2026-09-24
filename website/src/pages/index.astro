@@ -5,11 +5,12 @@ import Icon from '../components/Icon.astro';
 import Contact from '../components/Contact.astro';
 import { getCatalog } from '../lib/catalog';
 const catalog = await getCatalog();
+Astro.response.headers.set('Cache-Control', 'no-store, max-age=0');
 const products = catalog.products;
 const spotlight = products.find(p => p.featured) || products[0];
 const categories = [...new Set(products.map(p => p.category))].sort();
 ---
-<Layout demo={catalog.demo} image={spotlight?.poster_url}>
+<Layout demo={catalog.demo} image={spotlight?.poster_url} catalogRevision={catalog.revision}>
   <section class="hero">
     <div class="hero-copy wrap"><p class="hero-badge"><Icon name="check" size={14} /> A little more discovery. A little less scrolling.</p><h1>Discover your next favorite.<br /><span>We’ll help you find it.</span></h1><p class="hero-intro">Everyday upgrades, useful finds, and things you’ll love.<br class="desktop-break" /> Explore a pick. Choose the store that works for you.</p>
       <form id="product-search" class="hero-search" role="search"><label class="sr-only" for="search-finds">Search products</label><Icon name="search" /><input type="search" placeholder="Search products, categories, or stores…" id="search-finds" autocomplete="off" /><button type="submit" aria-label="Show search results"><Icon name="right" /></button></form>

@@ -2,21 +2,21 @@
 
 ## What happens when you save
 
-Drafts stay private. Publishing a complete product makes it available to the next site build. A database trigger advances the catalog version and queues a Pin only when `publish_to_pinterest=true`.
+Drafts stay private. Publishing a complete product makes it available on the live site immediately. A database trigger advances the catalog version and queues a Pin only when `publish_to_pinterest=true`.
 
-The scheduled function compares the public `catalog-version.json` with Supabase, requests a build if necessary, and checks that the exact product ID/version is present in its rendered HTML. It then posts one image/video Pin. The catalog download is consistent within a build; a failed catalog fetch fails the deployment instead of publishing an empty replacement.
+The scheduled function reads the live `catalog-version.json` from the Cloudflare Worker and checks that the exact product ID/version is present in its rendered HTML. It then posts one image/video Pin. No deploy hook or website rebuild is involved.
 
-Each run processes at most one ready Pin or one video upload stage. Multiple edits are batched into site builds. Related products are ranked by shared category, then shared tags, with recent products filling remaining spaces. No tracking cookies or paid recommendation API are used.
+Each run processes at most one ready Pin or one video upload stage. Product edits do not trigger site builds. Related products are ranked by shared category, then shared tags, with recent products filling remaining spaces. No tracking cookies or paid recommendation API are used.
 
 ## Edit, hide, or remove a product
 
 - Change `poster_url`/`poster_alt` to change the website poster. This does not create or modify a Pinterest Pin.
-- Change title, description, store links, category, or tags to update the website on its next deployment. Existing Pin text/media stay as they were; edit that Pin manually in Pinterest if necessary.
+- Change title, description, store links, category, or tags to update the live page immediately. Existing Pin text/media stay as they were; edit that Pin manually in Pinterest if necessary.
 - Set `publish_to_pinterest=false` to stop a pending Pin. It does not delete already published Pins.
-- Set `published=false` to remove a product page on the next successful site deployment. Old Pin links will then reach a 404, so normally keep useful product pages and update store links instead.
+- Set `published=false` to remove the product page immediately. Old Pin links will then reach a 404, so normally keep useful product pages and update store links instead.
 - Slugs become permanent after first publication, including after unpublishing. This protects existing links.
 - Do not delete jobs to request ordinary edits: their Pin IDs prevent duplicate posting.
-- Data changes take effect on a successful deployment, not instantly. If a sensitive removal is urgent, use the host's manual redeploy and verify the page. The system does not instantly invalidate old static files during an outage.
+- Data changes are served on the next request and open catalog pages reload within 30 seconds. If Supabase is unavailable, dynamic pages may return an error until it recovers.
 
 ## Publishing states
 
@@ -32,13 +32,13 @@ Inspect **Supabase → Table Editor → pinterest_jobs**. No credentials are exp
 | `failed` | Invalid input, revoked authorization, repeated failures, or failed video processing; read `last_error` |
 | `needs_review` | Pinterest may have accepted the Pin but its response was uncertain; inspect Pinterest before retrying |
 
-Inspect **catalog_state** for site deployment status:
+Inspect **catalog_state** for catalog and live-site verification status:
 
 - `revision`: current published catalog version.
-- `requested_revision`: version when the last build was requested.
-- `deployed_revision`: version observed on the live site.
+- `requested_revision`: legacy field; no longer used by real-time publishing.
+- `deployed_revision`: latest catalog revision verified on the live Worker.
 - `last_error`: a concise failure message.
-- `builds_today`: automatic deploy requests, capped at 12 per UTC day; manual/Git-triggered builds count separately at your host.
+- `builds_today`: legacy field; product updates do not trigger site builds.
 
 Cron invocation logs and Edge Function logs show run status. A Cron HTTP request being accepted does **not** by itself prove publishing succeeded; inspect the function response/jobs and the live site.
 
@@ -90,9 +90,9 @@ The worker refreshes tokens when processing work if they are near expiry or have
 
 Supabase Free currently includes a 500 MB database, 1 GB storage, and limited bandwidth/function usage; inactive projects may pause and automatic backups are not included. This site's real work is small at a few products a day, but video storage and image traffic can exhaust allowances. Do not assume unlimited free capacity or permanent uptime. [Supabase pricing](https://supabase.com/pricing)
 
-Cloudflare Pages Free currently allows 500 builds/month and 20,000 files. The publisher's 12/day automatic-build cap leaves some room for code deployments, but monitor actual usage. [Pages limits](https://developers.cloudflare.com/pages/platform/limits/)
+Cloudflare Workers Free currently includes 100,000 dynamic requests per day, shared with Workers and Pages Functions. Static asset requests are free and unlimited. [Workers pricing and limits](https://developers.cloudflare.com/workers/platform/pricing/)
 
-The previously deployed static site keeps serving if Supabase pauses. Editing and pinning wait until Supabase is restored. Old merchant information remains visible until a new successful build, so check links periodically.
+The Worker reads Supabase when rendering catalog pages. If Supabase pauses, catalog pages and publisher checks wait until it returns; static assets continue to be served.
 
 ## Backups
 
@@ -110,7 +110,7 @@ The previously deployed static site keeps serving if Supabase pauses. Editing an
 | Production build says catalog download failed | Migration exists, public key is correct, project is active; check `get_catalog` via SQL Editor |
 | Website shows no products | At least one real product must have `published=true`; no demo data is seeded |
 | Merchant buttons are missing in local demo | Intentional: samples are not real affiliate listings |
-| Site does not reflect an edit | Cron active, correct production deploy hook, host build logs, build limits, `catalog_state.last_error` |
+| Site does not reflect an edit | Confirm the new Cloudflare Worker is deployed, `SITE_URL` points to its live URL, and Supabase is active. Open `/catalog-version.json` and check `catalog_state.last_error`. |
 | Pin remains pending | `published=true`, pinning enabled, live manifest/product version, a valid board, and correct token environment |
 | Pin is visible only to you | Sandbox/Trial is not public posting; complete Standard approval and production connection |
 | Publisher returns 401 | `PUBLISHER_SECRET` must match the invocation header/Vault; ordinary Supabase JWTs do not authorize this function |

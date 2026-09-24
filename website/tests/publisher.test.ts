@@ -8,7 +8,7 @@ const product: Product & Record<string, any> = {
   stores: [{ name: 'Amazon', url: 'https://amazon.com/dp/B000000001?tag=test-20' }], featured: false, revision: 1, created_at: '2026-09-08',
   published: true, publish_to_pinterest: true, pinterest_board_id: '123', pin_media_type: 'image', pin_image_url: null, video_path: null,
 };
-const config: Config = { supabaseUrl: 'https://project.supabase.co', serviceKey: 'private-test-key', siteUrl: 'https://shop.example.com', deployHook: 'https://deploy.example.com/hook', enabled: true, apiEnv: 'sandbox', standardAccess: false, appId: 'id', appSecret: 'secret' };
+const config: Config = { supabaseUrl: 'https://project.supabase.co', serviceKey: 'private-test-key', siteUrl: 'https://shop.example.com', enabled: true, apiEnv: 'sandbox', standardAccess: false, appId: 'id', appSecret: 'secret' };
 function setup(options: { live?: boolean; pinResult?: number | 'timeout'; video?: boolean; processing?: boolean; htmlValid?: boolean; locked?: boolean; noBoard?: boolean; noPublicBoards?: boolean } = {}) {
   let job: Record<string, any> = { product_id: product.id, state: 'pending', pin_id: null, media_id: null, media_path: null, media_started_at: null, attempts: 0 };
   const current = { ...product, ...(options.video ? { pin_media_type: 'video', video_path: 'lamp.mp4' } : {}),...(options.noBoard?{pinterest_board_id:null}:{}) };
@@ -47,10 +47,11 @@ function setup(options: { live?: boolean; pinResult?: number | 'timeout'; video?
   }) as typeof fetch;
   return { fetcher, calls, get job() { return job; } };
 }
-test('waits for a deployed product and requests the website build before any Pin', async () => {
+test('waits for the live catalog revision and never requests a site deployment', async () => {
   const mock = setup({ live: false });
-  await runPublisher(config, mock.fetcher);
-  assert.ok(mock.calls.some(c => c.url === config.deployHook));
+  const result = await runPublisher(config, mock.fetcher);
+  assert.equal(result.deployment, 'waiting');
+  assert.ok(!mock.calls.some(c => c.url.includes('deploy')));
   assert.ok(!mock.calls.some(c => c.url.endsWith('/pins')));
 });
 test('posts image once with website destination and affiliate disclosure, then records ID', async () => {

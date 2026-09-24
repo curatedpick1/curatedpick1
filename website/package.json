@@ -12,6 +12,7 @@
     "build": "astro check && astro build",
     "build:demo": "node scripts/build-demo.mjs",
     "preview": "astro preview --host 127.0.0.1 --port 4322",
+    "deploy": "npm run build && wrangler deploy",
     "check": "astro check",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "test:build": "node tests/build-render.mjs",
@@ -19,12 +20,14 @@
     "publisher:run": "node --env-file=.env.publisher scripts/run-publisher.mjs"
   },
   "dependencies": {
+    "@astrojs/cloudflare": "^14.3.3",
     "@fontsource-variable/dm-sans": "5.3.0",
     "astro": "7.3.1"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",
     "@electric-sql/pglite": "^0.3.14",
-    "typescript": "~5.8.2"
+    "typescript": "~5.8.2",
+    "wrangler": "^4.139.0"
   }
 }

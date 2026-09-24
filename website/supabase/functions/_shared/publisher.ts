@@ -1,7 +1,7 @@
 import { httpsUrl, productUrl, validateProduct, type Product } from '../../../shared/catalog.ts';
 
 export interface Config {
-  supabaseUrl: string; serviceKey: string; siteUrl: string; deployHook: string;
+  supabaseUrl: string; serviceKey: string; siteUrl: string;
   enabled: boolean; apiEnv: 'sandbox' | 'production'; standardAccess: boolean;
   appId: string; appSecret: string; defaultBoardId?: string;
 }
@@ -81,35 +81,21 @@ export async function runPublisher(config: Config, fetcher: typeof fetch = fetch
       }
     } catch { /* Deployment may not be live yet. Keep waiting. */ }
     if (manifest && manifest.revision > state.revision) throw new Error('Website belongs to a newer/different catalog. Check SITE_URL and SUPABASE_URL.');
-    if (manifest && state.deployed_revision !== manifest.revision) await db('catalog_state?id=eq.1', 'PATCH', { deployed_revision: manifest.revision });
-    let deployment = 'current';
-    if (!manifest || manifest.revision < state.revision) {
-      deployment = 'waiting';
-      const age = state.requested_at ? Date.now() - Date.parse(state.requested_at) : Infinity;
-      const changed = state.requested_revision < state.revision;
-      const due = age >= 15 * 60_000 && (changed || age >= 30 * 60_000);
-      if (due && config.deployHook) {
-        const day = new Date().toISOString().slice(0, 10);
-        const count = state.build_day === day ? state.builds_today : 0;
-        if (count >= 12) {
-          await db('catalog_state?id=eq.1', 'PATCH', { last_error: 'Daily safety limit of 12 automatic builds reached. Publishing resumes tomorrow (UTC).' });
-        } else {
-          httpsUrl(config.deployHook);
-          // Record BEFORE the request: even an ambiguous network failure cannot cause a build storm.
-          await db('catalog_state?id=eq.1', 'PATCH', { requested_revision: state.revision, requested_at: new Date().toISOString(), build_day: day, builds_today: count + 1, last_error: null });
-          const response = await request(config.deployHook, { method: 'POST' }, 10_000);
-          if (!response.ok) throw new ApiError(response.status, 'Site deploy hook');
-          deployment = 'requested';
-        }
-      }
-    } else {
+    if (manifest?.revision === state.revision && state.deployed_revision !== manifest.revision) {
+      await db('catalog_state?id=eq.1', 'PATCH', { deployed_revision: manifest.revision });
+    }
+    const deployment = manifest?.revision === state.revision ? 'current' : 'waiting';
+    if (deployment === 'current') {
+      // This records a live Supabase-backed response, not a generated deployment.
       await db('catalog_state?id=eq.1', 'PATCH', { last_error: null });
+    } else if (manifest) {
+      await db('catalog_state?id=eq.1', 'PATCH', { last_error: 'The live site is serving an older catalog revision. Deploy the real-time Worker build once, then check again.' });
     }
     if (!config.enabled) return { status: 'website_only', deployment };
     if (config.apiEnv === 'production' && !config.standardAccess) throw new Error('Production Pin posting is disabled until PINTEREST_STANDARD_ACCESS=true after approval.');
     const jobs = await db<Job[]>(`pinterest_jobs?state=in.(pending,media_processing)&next_attempt_at=lte.${encodeURIComponent(new Date().toISOString())}&order=next_attempt_at.asc&limit=10`);
     let product: PrivateProduct | undefined;
-    // Skip a product still waiting for deployment, so it cannot starve other ready jobs.
+    // Skip a product until its current version is confirmed on the live Worker.
     for (const job of jobs) {
       const [candidate] = await db<PrivateProduct[]>(`products?id=eq.${encodeURIComponent(job.product_id)}&select=*`);
       if (!candidate?.published || !candidate.publish_to_pinterest || job.pin_id) continue;

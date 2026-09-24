@@ -13,7 +13,7 @@ function readConnection(settings) {
   if(!/^[a-z0-9-]+\.supabase\.co$/.test(url.hostname) || url.port || url.pathname !== '/')throw new Error('Enter your Supabase project URL: https://your-project.supabase.co');
   const key=settings.publishableKey || '';if(!key.startsWith('sb_publishable_'))throw new Error('The local Studio is missing its public Supabase configuration.');
   const site=safeUrl(settings.siteUrl || '');
-  if(site.pathname!=='/' || site.search || site.hash)throw new Error('Website URL should be only the origin, for example https://curatedpick1.pages.dev');
+  if(site.pathname!=='/' || site.search || site.hash)throw new Error('Website URL should be only the origin, for example https://your-worker.workers.dev');
   return {supabaseUrl:url.origin,publishableKey:key,siteUrl:site.origin};
 }
 async function request(path, options={}, auth=true) {
@@ -97,7 +97,7 @@ async function refresh(reset=true) {
   status=await request('/rest/v1/rpc/get_editor_status',{method:'POST',body:'{}'});
   const page=await request(`/rest/v1/products?select=*&order=created_at.desc,id.desc&limit=${pageSize}&offset=${reset?0:offset}`);
   products=reset?page:[...products,...page];offset=products.length;$('load-more').hidden=page.length<pageSize;
-  const c=status.catalog;$('site-state').textContent=c?.last_error?'Publisher needs attention':c?.deployed_revision>=c?.revision?'Latest revision verified':'Waiting for publisher / deploy';
+  const c=status.catalog;$('site-state').textContent=c?.last_error?'Publisher needs attention':c?.deployed_revision>=c?.revision?'Website live from Supabase':'Waiting for live site check';
   $('pin-state').textContent=status.pinterest_connected?'Credentials saved':'Not connected yet';
   renderList();renderJob();
 }
@@ -145,7 +145,7 @@ async function save(published) {
   await saveLocal(false);
   if(!session)await connect();
   if(draftProject && draftProject!==connection.supabaseUrl)throw new Error('This draft belongs to a different Supabase project. Sign in to that project before saving it online.');
-  if(!published && selected?.published && !confirm('Unpublish this product? Its public page will be removed on the next deployment. Existing Pins will remain.'))return;
+  if(!published && selected?.published && !confirm('Unpublish this product? Its public page will be removed immediately. Existing Pins will remain.'))return;
   // Check before uploading so an older backend cannot leave orphan media uploads.
   try{await request('/rest/v1/products?select=id,images&limit=0');}
   catch(error){if(error.code==='42703' || error.code==='PGRST204')throw new Error('Your draft is saved on this PC. This project needs its one-time gallery update before online publishing.');throw error;}
@@ -175,7 +175,7 @@ async function save(published) {
   if(!saved?.length)throw new Error('Another editor changed this product. Refresh and reopen it before saving. Your current edits are still in the form.');
   try{await deleteDraft(createId,localVersion);await refreshLocal();}catch{fill(saved[0]);tell('Saved to Supabase. A local draft also remains; review it before deleting.',true);return;}
   dirty=false;fill(saved[0]);
-  tell(published?`Saved to Supabase. ${values.publish_to_pinterest?'Pin queued; it will post only after the publisher verifies the live page.':'The website will update when its next deployment finishes.'}`:'Draft saved to Supabase.');
+  tell(published?`Saved to Supabase. ${values.publish_to_pinterest?'Pin queued; the publisher checks the live page and posts it without a site deployment.':'The website is updated from Supabase.'}`:'Draft saved to Supabase.');
   try{await refresh();}catch{tell('Product saved, but status could not refresh. Use Refresh status to check it.');}
 }
 form.addEventListener('submit',event=>{event.preventDefault();void locked(()=>save(true));});

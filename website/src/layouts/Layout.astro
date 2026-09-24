@@ -5,10 +5,12 @@ import '../styles/global.css';
 import '../styles/interactive.css';
 import Assistant from '../components/Assistant.astro';
 import Motion from '../components/Motion.astro';
-interface Props { title?: string; description?: string; image?: string; demo?: boolean; noindex?: boolean; }
+interface Props { title?: string; description?: string; image?: string; demo?: boolean; noindex?: boolean; catalogRevision?: number; }
 const { title = 'The Curated Pick — Discover your next favorite.', description = 'Discover considered finds for your home, your routine, and everywhere in between. Explore a product, choose a store, and make it yours.', image, demo = false, noindex = false } = Astro.props;
-const canonical = new URL(Astro.url.pathname, Astro.site || Astro.url.origin);
+Astro.response.headers.set('Cache-Control', 'no-store, max-age=0');
+const canonical = new URL(Astro.url.pathname, Astro.url.origin);
 const pinterest = import.meta.env.PUBLIC_PINTEREST_URL || 'https://www.pinterest.com/thecuratedpick1/';
+const { catalogRevision } = Astro.props;
 
 ---
 <!doctype html>
@@ -24,6 +26,7 @@ const pinterest = import.meta.env.PUBLIC_PINTEREST_URL || 'https://www.pinterest
     <meta property="og:site_name" content="The Curated Pick" />
     {image && <meta property="og:image" content={new URL(image, canonical)} />}
     <meta name="twitter:card" content="summary_large_image" />
+    {catalogRevision !== undefined && <meta name="catalog-revision" content={String(catalogRevision)} />}
     <meta name="pinterest-rich-pin" content="false" />
     {import.meta.env.PUBLIC_PINTEREST_VERIFY && <meta name="p:domain_verify" content={import.meta.env.PUBLIC_PINTEREST_VERIFY} />}
     <script is:inline>
@@ -69,6 +72,23 @@ const pinterest = import.meta.env.PUBLIC_PINTEREST_URL || 'https://www.pinterest
       document.addEventListener('click', event => { if (menu?.open && event.target instanceof Node && !menu.contains(event.target)) menu.open = false; });
       menu?.querySelectorAll('a').forEach(link => link.addEventListener('click', () => { menu.open = false; }));
       document.querySelectorAll<HTMLAnchorElement>('a[href="/#search-finds"]').forEach(link => link.addEventListener('click', () => { document.querySelector<HTMLInputElement>('#search-finds')?.focus(); }));
+      const catalogRevision = Number(document.querySelector<HTMLMetaElement>('meta[name="catalog-revision"]')?.content);
+      if (Number.isInteger(catalogRevision)) {
+        let checking = false;
+        const checkCatalog = async () => {
+          if (checking || document.visibilityState === 'hidden') return;
+          checking = true;
+          try {
+            const response = await fetch('/catalog-version.json', { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } });
+            if (!response.ok) return;
+            const latest = await response.json();
+            if (Number.isInteger(latest.revision) && latest.revision !== catalogRevision) location.reload();
+          } catch { /* Keep the current page usable during a brief network outage. */ }
+          finally { checking = false; }
+        };
+        window.setInterval(checkCatalog, 30_000);
+        window.addEventListener('focus', checkCatalog);
+      }
     </script>
     <Assistant />
     <Motion />

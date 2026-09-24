@@ -56,11 +56,11 @@ They install Node.js 24 and run the Linux launcher described above. The project 
 3. Add the matching store names and your full affiliate URLs.
 4. Choose image/video, supply a board ID, and check **Post to Pinterest** if desired. Choose a video and optional separate cover for a video Pin. Website images can be JPG/PNG/WebP; Pinterest covers should be JPG/PNG.
 5. **Save on this PC** saves an offline draft with its selected files. **Save to Supabase draft** uploads files and creates a shared draft, keeping it off the public website. **Publish product** uploads files, saves the product as public in Supabase, and queues its Pin if selected. If you are signed out, your draft is saved locally first and the sign-in form opens. After signing in, click the desired save/publish button again. Reconnecting to the internet does not publish anything automatically.
-6. Copy the generated permanent URL. It becomes reachable after Cloudflare rebuilds.
+6. Copy the generated permanent URL. It is reachable as soon as the product is saved.
 
 The main form shows title, description, Pin format/board, poster, image description, video when selected, and affiliate links. Category/tags, media URLs and homepage featuring are under **Optional details & existing media**. Shared drafts, deletion and detailed publishing status are under **More actions & publishing status**. The last board ID entered is remembered for new products.
 
-Status distinguishes draft/published database rows from a verified website deployment and actual Pinterest job states. “Credentials saved” does not prove the scheduled publisher is running or that Pinterest has granted production access. Click **Refresh** to see current progress. No automatic retry is offered for uncertain Pin submissions; use the recovery guidance in [OPERATIONS.md](OPERATIONS.md).
+Status shows whether the Worker is using the live Supabase catalog, along with actual Pinterest job states. “Credentials saved” does not prove the scheduled publisher is running or that Pinterest has granted production access. Click **Refresh** to see current progress. No automatic retry is offered for uncertain Pin submissions; use the recovery guidance in [OPERATIONS.md](OPERATIONS.md).
 
 Before an online save, the app saves a local recovery draft. A successful save removes that local draft. A failed upload/save keeps it for retry, including local file copies. A lost response on a new product save is recovered using the same product ID, even after reopening the browser; it does not create a second product. If that product already exists, it opens the saved version and keeps your local draft for comparing any newer edits. Review those edits before deleting the local draft. Conflicting edits from another browser tab or another editor are rejected, preserving the current form.
 
@@ -72,11 +72,11 @@ Uploads that already reached Supabase are not deleted when a form is abandoned. 
 
 You skipped the publisher and Pinterest setup. They are still needed for automatic posting:
 
-- Complete **SETUP step 6**: deploy the private publisher and connect the Cloudflare deploy hook.
+- Complete **SETUP step 6**: deploy the private publisher and set its `SITE_URL` to the new Worker URL.
 - Complete **step 7**: schedule it in Supabase. It continues running even when all local apps are closed.
 - Complete **steps 8–9**: authorize the Pinterest account, test, and obtain/enable the required production access. Use the board IDs returned by that connection in the local form.
 - You can skip the old manual product-entry step 5 and daily routine step 10; the form replaces those.
 
-Until these are complete, you can create drafts and publish rows, but Cloudflare needs a manual deployment to show changes and queued Pins will not automatically post. A local app cannot bypass Pinterest authorization or access approval.
+Until the real-time Worker and publisher are deployed, drafts can be saved but published products will not appear on the new live site and queued Pins will wait. A local app cannot bypass Pinterest authorization or access approval.
 
 The app has no public route in the Astro site. `studio/` is source tooling and is not copied into the public `dist` output. Run `npm run studio` for publishing, and `npm run dev` for a local preview of the public storefront.

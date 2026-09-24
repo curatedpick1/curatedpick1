@@ -8,7 +8,7 @@ This project is ready to configure, not already connected or deployed. Do not po
 
 ## 1. Choose your host
 
-For your $0 budget, choose **Cloudflare Pages Free**. If you specifically choose **Vercel**, the affiliate business needs a commercial plan; Hobby is for noncommercial personal use. Both deployment paths are included below. [Vercel rules](https://vercel.com/docs/limits/fair-use-guidelines)
+For your $0 budget, use **Cloudflare Workers Free**. This storefront renders from Supabase when each request arrives, so product edits do not wait for a static-site rebuild. Free Workers currently allow up to 100,000 requests a day; page rendering uses that daily allowance. [Cloudflare pricing](https://developers.cloudflare.com/workers/platform/pricing/)
 
 You will also need a free Supabase account, a GitHub account, and a Pinterest business/developer account. Use your existing domain if you have one, or the host's included subdomain; buying a new domain costs extra.
 
@@ -32,39 +32,19 @@ Do not upload `node_modules`, `dist`, `.env`, `.env.functions`, `.env.publisher`
 
 If you publish the existing `Curated` repository instead, configure the hosting project's **Root Directory as `website`**. If the new repository contains only the contents of `website`, leave Root Directory at its default.
 
-## 4A. Deploy on Cloudflare Pages — the free option
+## 4. Deploy the real-time site on Cloudflare Workers Free
 
-1. Open Cloudflare → **Workers & Pages → Create application → Pages → Connect to Git**. Choose the private repository and your production branch, usually `main`.
-2. Choose an available project name. Its default URL will be `https://YOUR-PROJECT.pages.dev`.
-3. Set **Framework preset: Astro**, **Build command: `npm run build`**, **Build output directory: `dist`**. Set the root directory as explained above.
-4. Add these build environment variables:
+The old `curatedpick1.pages.dev` Pages site is a static snapshot. Keep it for now; create a Worker for the real-time site. The Worker URL will be different unless you connect a custom domain.
 
-| Variable | Value |
-| --- | --- |
-| `NODE_VERSION` | `24` |
-| `SITE_URL` | Your full `https://YOUR-PROJECT.pages.dev` URL, or already configured primary custom domain |
-| `SUPABASE_URL` | Your Supabase project URL |
-| `SUPABASE_PUBLISHABLE_KEY` | Your public publishable/anon key |
-| `DEMO_MODE` | `false` |
-| `PUBLIC_CONTACT_EMAIL` | Your public contact email |
-| `PUBLIC_PINTEREST_URL` | `https://www.pinterest.com/thecuratedpick1/` |
+1. In Cloudflare, open **Workers & Pages ? Create application ? Workers Builds ? Connect to Git**.
+2. Select `curatedpick1/curatedpick1`, branch `full-workspace`, and set the root directory to `website`.
+3. Set the build command to `npm run build` and deploy command to `npx wrangler deploy`. The repository includes `wrangler.jsonc` with the Worker configuration.
+4. Add build variables: `NODE_VERSION=24`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `DEMO_MODE=false`, `PUBLIC_CONTACT_EMAIL`, and `PUBLIC_PINTEREST_URL`.
+5. Deploy. Cloudflare will show the real `https://...workers.dev` URL. Open it and check the home page, one product page, `/catalog-version.json`, and `/privacy/`.
 
-5. Click **Save and Deploy**. The first deployment may correctly show an empty collection.
-6. Open the assigned domain. If it differs from `SITE_URL`, correct the variable and rebuild.
-7. Open project **Settings → Builds & deployments → Deploy hooks**. Create a hook for the production branch called `Supabase catalog`. Copy its private URL for Step 6.
+New and edited products are read from Supabase on each page request. Open pages check the catalog every 30 seconds and reload when it changes. HTML and catalog responses are marked `no-store`; static images, styles, and fonts remain static assets. Cloudflare's free Workers allowance is 100,000 dynamic requests per day, shared with other Workers and Pages Functions on the account.
 
-This is a static site: no Cloudflare adapter, Worker, or paid function is needed. [Astro on Pages](https://developers.cloudflare.com/pages/framework-guides/deploy-an-astro-site/)
-
-## 4B. Deploy on Vercel — requires commercial eligibility
-
-1. Use a Vercel team/plan that permits this commercial affiliate site. Open **Add New → Project**, import the repository, and select the correct Root Directory.
-2. Select **Astro**. Use **Install command: `npm ci`**, **Build command: `npm run build`**, and **Output Directory: `dist`**. Select Node.js **24.x**.
-3. Add the same variables from Step 4A, except `NODE_VERSION` is set through Vercel's Node setting and `SITE_URL` uses your production `https://YOUR-PROJECT.vercel.app` URL or configured custom domain. Set the variables for Production; set them for Preview too if you want content previews.
-4. Click **Deploy**. Verify the assigned production domain and correct `SITE_URL` if necessary, then redeploy.
-5. Under **Settings → Git → Deploy Hooks**, create `Supabase catalog` for your production branch. Save that private hook URL for Step 6.
-6. Ensure your **production** product pages and `/catalog-version.json` are publicly readable. A login-protected preview URL cannot be a Pin destination.
-
-The included `vercel.json` already supplies the build settings and basic security/cache headers. Do not deploy the old parent Express app. [Astro on Vercel](https://docs.astro.build/en/guides/deploy/vercel/)
+After the first deployment, use this Worker URL for `SITE_URL` in Step 6. If you own a custom domain, attach it to the Worker first and use that hostname instead. Update the Pinterest app's website and OAuth redirect URLs if its old `pages.dev` address was registered. Set the same `SITE_URL` in `website/.env.example` and rebuild the Windows installer so new Pins point to the Worker site.
 
 ## 5. Add your first real product
 
@@ -104,7 +84,7 @@ Example structure for `stores` — **replace the entire URLs with your own valid
 
 These placeholders only illustrate the format. Collect links from each merchant's affiliate program; the code does not enroll you or add affiliate tracking automatically. Only offer stores carrying the matching product; variants and wholesale minimums can differ.
 
-4. Save the row. Once complete, set `published=true`. Before automation is configured, manually redeploy the host once to see the product.
+4. Save the row with `published=true`. It is available on the live site immediately after the real-time Worker has been deployed once.
 5. Its URL is `https://YOUR-DOMAIN/products/THE-GENERATED-SLUG/`. Open it and test each store button.
 
 ## 6. Deploy the private publisher
@@ -129,7 +109,6 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 Edit your private `.env.functions`:
 
 - `SITE_URL`: exact public production website origin.
-- `SITE_DEPLOY_HOOK`: private hook from your chosen host.
 - `PUBLISHER_SECRET`: the generated 64-character value.
 - Leave `PINTEREST_PUBLISHING_ENABLED=false`, `PINTEREST_STANDARD_ACCESS=false`, and `PINTEREST_API_ENV=sandbox` for now. The app ID/secret can wait until Step 8.
 
@@ -147,18 +126,18 @@ In private `.env.publisher`, set `SUPABASE_URL` and the same `PUBLISHER_SECRET`.
 npm run publisher:run
 ```
 
-Expect `website_only`, with `deployment` showing `requested`, `waiting`, or `current`. Run again after the host finishes its build. The function checks the real deployment; a successful deploy-hook response alone is not enough to post a Pin.
+Expect `website_only` and `deployment: current`. The function checks the live Worker and the exact product page before it posts a Pin. If it reports `waiting`, confirm that the Worker is deployed and that `SITE_URL` points to it.
 
 The function's JWT verification is intentionally disabled in its config: it instead requires the private `x-publisher-secret` header. Public site keys do not authorize publishing. Supabase injects its own service-role credentials into the function; never copy those into the website's hosting variables. [Function secrets](https://supabase.com/docs/guides/functions/secrets)
 
-## 7. Schedule automatic website updates
+## 7. Schedule automatic Pin publishing
 
 1. In Supabase **Database → Extensions**, enable **pg_cron** (Cron) and **pg_net**. Supabase Vault must also be available.
 2. Open [supabase/schedule.sql](supabase/schedule.sql), copy its contents to the SQL Editor, and replace `YOUR-PROJECT` and `YOUR-RANDOM-PUBLISHER-SECRET` in that editor. Use the **same** secret from Step 6. Do not save a filled copy in Git.
 3. Run it once. Confirm a job named `curated-publisher` appears in Cron and is active.
-4. Edit a published product and wait for the next runs. Expect a new host deployment, then the updated page. Check `catalog_state.last_error` if it does not update.
+4. Edit a published product; the Worker serves the new data immediately. The publisher checks it on its next run. Check `catalog_state.last_error` if the Pin remains queued.
 
-The job runs every five minutes. Deploy requests are batched at least 15 minutes apart and limited to 12 per UTC day to protect free build allowances. Normal posting is usually ready in minutes, but queues, host build time, quota limits, or outages can delay it. [Supabase scheduling](https://supabase.com/docs/guides/functions/schedule-functions)
+The job runs every five minutes. Site updates are immediate; Pinterest posting waits for the next scheduled check and any required image/video processing. Outages or queue load can delay posting. [Supabase scheduling](https://supabase.com/docs/guides/functions/schedule-functions)
 
 ## 8. Connect Pinterest privately
 
@@ -175,7 +154,7 @@ npm run pinterest:connect
 6. Open the authorization URL printed by the script. Log into your intended Pinterest account and approve the app. On the callback page, click **Copy connection response**, then paste it into the waiting terminal. Do not close the terminal during this process.
 7. The script validates the response, stores tokens in the private `pinterest_tokens` table, and lists accessible boards with their numeric IDs. Set your product's `pinterest_board_id` to the intended board ID. Use a board available to the selected sandbox/production environment.
 8. Add the same Pinterest app ID/secret to `.env.functions`, keep the API environment `sandbox`, set `PINTEREST_PUBLISHING_ENABLED=true`, and run `npx supabase secrets set --env-file .env.functions`.
-9. Set `publish_to_pinterest=true` on the one product you want to test. A `pinterest_jobs` row should appear. Wait for the published site version, then watch the job move through pending/upload states to `published`.
+9. Set `publish_to_pinterest=true` on the one product you want to test. A `pinterest_jobs` row should appear. The publisher checks the live page on its next five-minute run, then moves the job through pending/upload states to `published`. No website rebuild is needed.
 
 The video file is uploaded first, then checked on a later tick before Pin creation. Image Pins do not need that upload stage. Photos/covers should be JPEG or PNG; a poster by itself cannot become a video. [Pinterest media flow](https://developer.pinterest.com/docs/work-with-organic-content-and-users/create-boards-and-pins/)
 
@@ -206,8 +185,8 @@ Until approval, you can use the site normally and manually publish Pins using ea
 1. Collect matching store affiliate links. Upload your licensed image/video once to Supabase Storage.
 2. Add a **single** product row with title, description, poster, store links, category/tags, and Pinterest settings.
 3. Set `published=true` and `publish_to_pinterest=true` after reviewing it.
-4. The site rebuilds; automation verifies the actual page and creates one Pin.
-5. To change only the website image later, replace `poster_url` and `poster_alt`. The next deployment updates the page; the existing Pin is left alone. A separate `pin_image_url` lets the initial Pin use a different image/cover.
+4. The site reads the new product directly from Supabase. The publisher verifies the exact live page and creates one Pin; no rebuild is needed.
+5. To change only the website image later, replace `poster_url` and `poster_alt`. The live page updates immediately; the existing Pin is left alone. A separate `pin_image_url` lets the initial Pin use a different image/cover.
 
 Keep `published` products complete. New public products are rejected if they have no valid store links or poster. Published slugs cannot change, so old Pins keep working.
 

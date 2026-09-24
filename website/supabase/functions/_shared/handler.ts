@@ -17,7 +17,7 @@ export function createHandler(env: (name: string) => string, fetcher: typeof fet
     try {
       const result = await runPublisher({
         supabaseUrl: env('SUPABASE_URL'), serviceKey: env('SUPABASE_SERVICE_ROLE_KEY'), siteUrl: env('SITE_URL'),
-        deployHook: env('SITE_DEPLOY_HOOK'), enabled: env('PINTEREST_PUBLISHING_ENABLED') === 'true',
+        enabled: env('PINTEREST_PUBLISHING_ENABLED') === 'true',
         apiEnv: env('PINTEREST_API_ENV') === 'production' ? 'production' : 'sandbox',
         standardAccess: env('PINTEREST_STANDARD_ACCESS') === 'true', appId: env('PINTEREST_APP_ID'), appSecret: env('PINTEREST_APP_SECRET'),
         defaultBoardId: env('PINTEREST_DEFAULT_BOARD_ID'),
