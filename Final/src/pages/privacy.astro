@@ -1,6 +1,34 @@
----
+﻿---
 import Layout from '../layouts/Layout.astro';
+const contact = import.meta.env.PUBLIC_CONTACT_EMAIL || 'curatedpick.store@gmail.com';
 ---
-<Layout title="Privacy — The Curated Pick">
-  <article class="prose wrap"><p class="eyebrow">PRIVACY</p><h1>A simpler visit.</h1><p>You can browse The Curated Pick without creating an account. This version has no account system, checkout, wishlist, advertising pixels, or site analytics. Search and category filters run in your browser. Your current filters appear in the page URL so you can return to or share a search; page requests containing those URLs may appear in hosting logs.</p><h2>Your display preference</h2><p>If you switch between light and dark mode, we save that preference in your browser's local storage. It is not used to identify or track you. You can remove it by clearing this website's browser data.</p><h2>Hosting and images</h2><p>Our hosting and image providers may process technical request information, such as IP addresses and browser information, to deliver and protect the website. Product images may be served from Supabase Storage or an image source chosen for that product. Fonts are served with the website.</p><h2>Links to stores and Pinterest</h2><p>When you follow an external link, that service's privacy policy applies. Affiliate networks and stores may use cookies or other identifiers to attribute purchases. The Curated Pick does not control those systems.</p><h2>Catalog assistant</h2><p>The assistant searches a copy of our published product catalog in your browser. It does not use a generative AI service or send your chat messages to us. The conversation is held in memory on the current page and is cleared when you leave or reload. Opening a suggested link makes a normal page request.</p><h2>Email</h2><p>The contact composer opens a draft in your email app; it does not submit or save your message on this website. If you contact us by email, we receive the information you choose to send and use it to respond. Do not send payment details or passwords.</p><h2>Questions</h2><p>Contact <a href={`mailto:${import.meta.env.PUBLIC_CONTACT_EMAIL || 'curatedpick.store@gmail.com'}`}>{import.meta.env.PUBLIC_CONTACT_EMAIL || 'curatedpick.store@gmail.com'}</a> about this site's privacy practices.</p></article>
+<Layout title="Privacy policy — The Curated Pick" description="Privacy policy for The Curated Pick affiliate product discovery website.">
+  <article class="prose wrap">
+    <p class="eyebrow">PRIVACY POLICY</p>
+    <h1>Your privacy, kept simple.</h1>
+    <p class="lead">Last updated: September 25, 2026</p>
+    <p>The Curated Pick is an affiliate product-discovery website. You can browse product pages without creating an account, signing in, or giving us personal information.</p>
+
+    <h2>Information we receive</h2>
+    <p>When you browse, our hosting and security providers may process technical information such as your IP address, browser type, device information, and requested pages. This is used to deliver and protect the site.</p>
+    <p>Search terms and filters run in your browser. We do not use advertising pixels or a third-party analytics profile on this site.</p>
+
+    <h2>Product links and affiliate partners</h2>
+    <p>Product pages contain links to stores such as Amazon, AliExpress, Alibaba, and other merchants. Those stores and affiliate networks may use cookies or similar tools to attribute a visit or qualifying purchase. Their own privacy policies control what they collect after you leave this site. See our <a href="/disclosure/">affiliate disclosure</a>.</p>
+
+    <h2>Pinterest</h2>
+    <p>We may publish product links to our Pinterest account through Pinterest's official API. Pinterest account authorization is used only for that publishing connection. Visitors to this website are not asked to connect a Pinterest account, and we do not collect Pinterest passwords. Pinterest's privacy policy applies to activity on Pinterest.</p>
+
+    <h2>Images and hosting</h2>
+    <p>Product images and catalog data may be delivered from our hosting or Supabase storage. These providers may process technical request information needed to serve the files.</p>
+
+    <h2>Contact</h2>
+    <p>If you email us, we receive the information you choose to include and use it to reply. Do not send passwords, payment details, or other sensitive information. Contact us at <a href={`mailto:${contact}`}>{contact}</a>.</p>
+
+    <h2>Your choices</h2>
+    <p>You can clear local browser storage to remove saved display preferences. You can also block cookies or leave the site before opening a merchant link. We do not control the privacy practices of external services.</p>
+
+    <h2>Changes</h2>
+    <p>We may update this policy when the site or its services change. The date above shows when the latest version was published.</p>
+  </article>
 </Layout>
