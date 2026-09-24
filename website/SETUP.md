@@ -26,11 +26,11 @@ These migrations are run once on a fresh project. They intentionally do not inse
 
 ## 3. Prepare your GitHub repository
 
-Recommended: create a **private, empty GitHub repository** for this new site. Use GitHub Desktop to add the `Final` folder and publish it. Include the source files and `package-lock.json`.
+Recommended: create a **private, empty GitHub repository** for this new site. Use GitHub Desktop to add the `website` folder and publish it. Include the source files and `package-lock.json`.
 
 Do not upload `node_modules`, `dist`, `.env`, `.env.functions`, `.env.publisher`, `.private`, or `test-results`. The included `.gitignore` excludes them. The `.example` files are safe templates.
 
-If you publish the existing `Curated` repository instead, configure the hosting project's **Root Directory as `Final`**. If the new repository contains only the contents of `Final`, leave Root Directory at its default.
+If you publish the existing `Curated` repository instead, configure the hosting project's **Root Directory as `website`**. If the new repository contains only the contents of `website`, leave Root Directory at its default.
 
 ## 4A. Deploy on Cloudflare Pages — the free option
 
@@ -109,10 +109,10 @@ These placeholders only illustrate the format. Collect links from each merchant'
 
 ## 6. Deploy the private publisher
 
-Open a PowerShell terminal in `Final`. The Supabase CLI runs through `npx`; Docker is not needed to deploy this hosted function.
+Open a PowerShell terminal in `website`. The Supabase CLI runs through `npx`; Docker is not needed to deploy this hosted function.
 
 ```powershell
-cd C:\Users\Stymite\Desktop\Curated\Final
+cd C:\Users\Stymite\Desktop\Curated\website
 npx supabase login
 npx supabase link --project-ref YOUR_PROJECT_REFERENCE
 Copy-Item .env.functions.example .env.functions

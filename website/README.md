@@ -1,23 +1,23 @@
-# The Curated Pick — Final
+# The Curated Pick — Website
 
 A standalone affiliate discovery website. Add a product once in Supabase, publish its page, then automatically publish its image or video Pin. Visitors choose a store and can keep exploring related products.
 
-Everything for this project is inside `Final`. It does not use the old app, server, admin panel, or browser-stored catalog.
+This folder contains the public storefront, Supabase backend, and shared Studio form. The separate Windows desktop shell is in `../desktop-app`.
 
-The interface draws from the original site's blue/teal palette, shopping-bag logo, compact cards, and mobile navigation. Scroll reveals, headline entrances, light/dark mode, and product sharing work locally. Motion respects reduced-motion preferences, and content remains visible without JavaScript. This is the project to preview and deploy; the older parent app is only a design reference.
+The interface uses the curated site's blue/teal palette, shopping-bag logo, compact cards, and mobile navigation. Scroll reveals, headline entrances, light/dark mode, and product sharing work locally. Motion respects reduced-motion preferences, and content remains visible without JavaScript. The earlier Vite version is kept in `../archive/legacy-vite` for reference.
 
 The floating Curated assistant searches `/assistant-catalog.json`, generated from the same published Supabase catalog, and answers basic site questions. It is a local catalog helper, not Gemini or generative AI; there are no AI keys, fees, or chat messages sent to a server. The contact section and `/contact/` page open email drafts rather than submitting messages to a backend. Set `PUBLIC_CONTACT_EMAIL` when ready to deploy.
 
-**Start with [SETUP.md](SETUP.md)** for the complete Supabase → hosting → Pinterest setup.
+**Start with [the workspace guide](../README.md)** for the basic commands. Use [SETUP.md](SETUP.md) for the full Supabase, hosting, and Pinterest setup.
 
 **Want a private product form on your computer?** With Node.js 24 installed, double-click **Start Studio.cmd** on Windows or run **Start Studio.sh** on Linux. It starts the local server and opens the browser; first launch installs missing dependencies. The form opens immediately. Use **Save on this PC** to keep unfinished products and selected photos/videos offline. Publishing uses one admin passkey; no username or settings appear on the login page. Follow [LOCAL-STUDIO.md](LOCAL-STUDIO.md) to enable the admin account. This local app connects to the same Supabase catalog and is separate from the public storefront.
 
-## Preview on your computer
+## Preview the website on your computer
 
 Use Node.js 24. In a terminal:
 
 ```powershell
-cd C:\Users\Stymite\Desktop\Curated\Final
+cd C:\Users\Stymite\Desktop\Curated\website
 npm ci
 npm run dev
 ```

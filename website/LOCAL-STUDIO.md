@@ -26,7 +26,7 @@ The Studio contains one admin login, as requested. Its page asks only for the pa
 Install Node.js 24 if needed. In a terminal:
 
 ```powershell
-cd C:\Users\Stymite\Desktop\Curated\Final
+cd C:\Users\Stymite\Desktop\Curated\website
 npm ci
 npm run studio
 ```
@@ -45,7 +45,7 @@ Optionally copy [.env.studio.example](.env.studio.example) to `.env.studio` and 
 
 ## 4. Give a friend the app
 
-Give them a copy of the project's source or repository access. Since the `curatedpick1/curatedpick1` repository contains this project's files directly at its root, their terminal should open that folder (there is no nested `Final` there).
+Give them a copy of the project's source or repository access. The `curatedpick1/curatedpick1` website repository contains the website project's files directly at its root, so their terminal should open that repository folder.
 
 They install Node.js 24 and run the Linux launcher described above. The project already contains its public connection settings; they unlock publishing with the same single admin passkey. Copy source files only; do not send your `.env.publisher`, `.env.functions`, or other secret files. Anyone with the passkey can edit the shared catalog. If two people edit a product concurrently, a stale save is rejected rather than silently overwriting the other edit.
 

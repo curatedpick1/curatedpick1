@@ -1,0 +1,4 @@
+node_modules/
+release/
+private/
+studio-auth.cjs

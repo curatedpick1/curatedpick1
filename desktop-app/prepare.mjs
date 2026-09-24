@@ -2,7 +2,7 @@ import {copyFile, mkdir, readFile, writeFile} from 'node:fs/promises';
 import {parseEnv} from 'node:util';
 import sharp from 'sharp';
 
-const root = new URL('../', import.meta.url);
+const root = new URL('../website/', import.meta.url);
 const assets = new URL('./assets/', import.meta.url);
 const credential = JSON.parse(await readFile(new URL('.private/studio-access.json', root), 'utf8'));
 const privateDirectory = new URL('./private/', import.meta.url);

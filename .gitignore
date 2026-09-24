@@ -6,3 +6,5 @@ coverage/
 *.log
 .env*
 !.env.example
+!archive/**/.env.example
+archive/legacy-vite/build-output/

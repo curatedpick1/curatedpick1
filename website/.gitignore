@@ -13,7 +13,3 @@ dist/
 supabase/.temp/
 supabase/.branches/
 test-results/
-desktop/assets/
-desktop/release/
-desktop/private/
-desktop/studio-auth.cjs

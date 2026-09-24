@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" aria-label="The Curated Pick Logo">
+  <!-- Shopping Bag Handle -->
+  <path
+    d="M 40 34 C 40 19, 60 19, 60 34"
+    stroke="#041a38"
+    stroke-width="7"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+  <!-- Shopping Bag Body -->
+  <path
+    d="M 33 34 L 67 34 C 69.8 34, 71.9 36, 72.2 38.8 L 75.3 78.2 C 75.8 83.5, 71.6 88, 66.3 88 L 33.7 88 C 28.4 88, 24.2 83.5, 24.7 78.2 L 27.8 38.8 C 28.1 36, 30.2 34, 33 34 Z"
+    stroke="#041a38"
+    stroke-width="7"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+  <!-- Vibrant Cyan Checkmark -->
+  <path
+    d="M 38 54 L 49 66 L 71 29"
+    stroke="#00bcd4"
+    stroke-width="8.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+</svg>

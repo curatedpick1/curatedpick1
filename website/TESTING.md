@@ -1,6 +1,6 @@
 # Verification
 
-Run from `Final` with Node.js 24:
+Run from `website` with Node.js 24:
 
 ```powershell
 npm ci

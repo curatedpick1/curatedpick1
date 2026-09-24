@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Curated Studio</title><link rel="icon" href="/logo.svg"><link rel="stylesheet" href="/style.css"><script src="/app.js" type="module"></script>
+</head>
+<body>
+<header><a class="brand" href="/"><img src="/logo.svg" width="32" height="32" alt="">The Curated Pick <span>STUDIO</span></a><div class="actions"><button id="connect-online" hidden>Reconnect</button></div></header>
+<main>
+  <section id="workspace" hidden>
+    <div class="workspace-heading"><div><h1>Product studio</h1><p id="signed-in">Draft offline. Publish when ready.</p></div><div class="actions"><button id="refresh" hidden>Refresh</button><button id="new-product">+ New product</button></div></div>
+    <p id="notice" role="status"></p>
+    <div class="studio-grid">
+      <aside class="panel library">
+        <div class="library-head"><h2>Local drafts</h2><span id="local-count">0</span></div><div id="local-list"></div>
+        <details><summary>Shared products <span id="product-count">0</span></summary><label>Search<input id="library-search" type="search" placeholder="Find a product"></label><div id="product-list"></div><button id="load-more" hidden>Load more</button></details>
+      </aside>
+      <form novalidate id="product-form" class="panel editor">
+        <div class="editor-heading"><div><p class="eyebrow" id="editor-label">NEW PRODUCT</p><h2 id="editor-title">New product</h2></div><span id="job-state" class="badge">Draft</span></div>
+        <label>Title<input name="title" maxlength="100" required placeholder="Product name"></label>
+        <label>Description<textarea name="description" maxlength="440" rows="3" placeholder="What makes it useful?"></textarea><small>Used on your website and Pin.</small></label>
+        <section class="form-section">
+          <div class="section-title"><h3>Photos &amp; video</h3><span>Up to 10 photos + 1 video</span></div>
+          <label class="media-upload">Add files<input id="media-files" type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/x-m4v"></label>
+          <small>Upload photos, a video, or both. The first photo is your poster. Sizes are prepared automatically. Up to 20 MB per file.</small>
+          <div id="media-list" class="media-list" aria-label="Product media"></div>
+          <small id="media-summary" role="status"></small>
+          <input type="hidden" name="poster_url"><input type="hidden" name="pin_image_url"><input type="hidden" name="video_path"><input type="hidden" name="pin_media_type">
+        </section>
+        <section class="form-section"><div class="section-title"><h3>Affiliate links</h3><button type="button" id="add-store">+ Add store</button></div><div id="stores"></div></section>
+        <details class="optional-fields"><summary>Optional details</summary>
+          <div class="field-grid"><label>Category<input name="category" list="categories" maxlength="40" value="Home & living"><datalist id="categories"><option>Home & living</option><option>Tech & desk</option><option>Kitchen & dining</option><option>On the go</option><option>Style & essentials</option></datalist></label><label>Tags<input name="tags" placeholder="desk, lighting"><small>Up to 12, separated by commas.</small></label></div>
+          <label>Pinterest board ID — optional<input name="pinterest_board_id" inputmode="numeric" pattern="[0-9]*" placeholder="Use the account’s default board"><small>Leave blank to choose automatically from your connected account.</small></label>
+          <label>Image description — optional<input name="poster_alt" maxlength="500" placeholder="Uses the product title if left blank"></label>
+          <label class="toggle"><input name="featured" type="checkbox"> Feature on homepage</label>
+        </details>
+        <div class="save-bar"><div><label class="toggle"><input name="publish_to_pinterest" type="checkbox" checked> Post to Pinterest</label><p id="save-hint">Saved drafts stay on this PC.</p></div><div class="actions"><button type="button" id="save-local">Save on this PC</button><button class="primary" id="publish" type="submit">Publish product</button></div></div>
+        <div id="saved-links" hidden><label>Product page<input id="product-url" readonly></label><div class="actions"><button type="button" id="copy-url">Copy link</button><a id="view-product" target="_blank" rel="noopener noreferrer">Open page ↗</a></div></div>
+        <details><summary>More actions &amp; publishing status</summary><div class="actions secondary-actions"><button type="button" id="save-draft">Save to Supabase draft</button><button type="button" id="delete-local" hidden>Delete local draft</button></div><div class="status-strip"><div><small>CONNECTION</small><strong id="connection-state">Local drafts only</strong></div><div><small>WEBSITE</small><strong id="site-state">Not checked</strong></div><div><small>PINTEREST</small><strong id="pin-state">Not checked</strong></div></div><p class="note" id="pinterest-help"></p></details>
+      </form>
+    </div>
+  </section>
+</main>
+</body>
+</html>
