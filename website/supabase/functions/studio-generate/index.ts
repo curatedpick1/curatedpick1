@@ -45,7 +45,7 @@ Deno.serve(async (request) => {
       method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': geminiKey },
       body: JSON.stringify({
         contents: [{ parts: [
-          { text: `Write concise, useful affiliate-product listing copy using only facts visible in the photo or stated in the title. Do not invent brands, materials, dimensions, features, prices, guarantees, or performance claims. Return one JSON object only: {"description":"...","category":"...","tags":["..."]}. Description: plain language, 1-3 sentences, max 440 characters. Choose exactly one category from this list: ${categories.join(' | ')}. Tags: 4-8 relevant short search phrases, each max 40 characters, no hashtags. Product title: ${title}` },
+          { text: `Write a natural, human-sounding product description using only facts visible in the photo or stated in the title. Do not invent brands, materials, dimensions, features, prices, guarantees, or performance claims. Avoid sales clichés and overly polished marketing language. Return one JSON object only: {"description":"...","category":"...","tags":["..."]}. Description: normal length, about 30-45 words in 2 short sentences, plain conversational language, maximum 440 characters. Do not use emojis, em dashes, or en dashes. Choose exactly one category from this list: ${categories.join(' | ')}. Tags: 4-8 relevant short search phrases, each max 40 characters, no hashtags. Product title: ${title}` },
           { inline_data: { mime_type: mimeType, data: imageBase64 } },
         ] }],
         generationConfig: { responseMimeType: 'application/json', temperature: 0.3 },
@@ -59,7 +59,9 @@ Deno.serve(async (request) => {
     const text = data?.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text || '').join('');
     const value = JSON.parse(text || '{}');
     const category = categories.includes(value.category) ? value.category : categories[0];
-    const description = typeof value.description === 'string' ? value.description.trim().slice(0, 440) : '';
+    const description = typeof value.description === 'string'
+      ? value.description.replace(/[—–]/g, ',').replace(/[\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Modifier}\uFE0F\u200D]/gu, '').replace(/\s+([,.!?])/g, '$1').replace(/,{2,}/g, ',').replace(/\s{2,}/g, ' ').trim().slice(0, 440)
+      : '';
     const tags = Array.isArray(value.tags) ? [...new Set(value.tags.filter((tag: unknown) => typeof tag === 'string').map((tag: string) => tag.trim().slice(0, 40)).filter(Boolean))].slice(0, 12) : [];
     if (!description) return respond({ error: 'The AI returned an empty description. Try again.' }, 502);
     return respond({ description, category, tags });
