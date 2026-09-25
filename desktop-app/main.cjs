@@ -32,7 +32,7 @@ else {
     const site = new URL(config.siteUrl).origin;
     const getSession = createStudioSession(config, path.join(__dirname, 'private', 'editor.json'));
     const headers = {
-      'Content-Security-Policy': `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https: blob:; media-src blob:; connect-src 'self' ${new URL(config.supabaseUrl).origin}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
+      'Content-Security-Policy': `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https: blob:; media-src blob:; connect-src 'self' ${new URL(config.supabaseUrl).origin} ${site}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
       'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store',
     };
     protocol.handle('curated', async request => {
@@ -62,7 +62,8 @@ else {
     function openProduct(urlString) {
       try {
         const url = new URL(urlString);
-        if (url.protocol === 'https:' && url.origin === site && !url.username && !url.password) {
+        const trustedHost = url.origin === site || url.hostname === 'supabase.com' || url.hostname === 'www.pinterest.com';
+        if (url.protocol === 'https:' && trustedHost && !url.username && !url.password) {
           shell.openExternal(url.href).catch(() => {});
         }
       } catch { /* Ignore malformed or untrusted navigation. */ }

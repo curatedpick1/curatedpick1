@@ -22,6 +22,9 @@ const contact = import.meta.env.PUBLIC_CONTACT_EMAIL || 'curatedpick.store@gmail
     <h2>Images and hosting</h2>
     <p>Product images and catalog data may be delivered from our hosting or Supabase storage. These providers may process technical request information needed to serve the files.</p>
 
+    <h2>Optional AI suggestions for editors</h2>
+    <p>Editors may choose to send a product title and poster image to Google's Gemini API to suggest a description, category, and tags. These suggestions are optional and reviewed by an editor before publication. When using Google's unpaid API tier, Google may use submitted content to improve its services and human reviewers may process it. Do not send private or sensitive material. See <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener noreferrer">Google's Gemini API terms</a>.</p>
+
     <h2>Contact</h2>
     <p>If you email us, we receive the information you choose to include and use it to reply. Do not send passwords, payment details, or other sensitive information. Contact us at <a href={`mailto:${contact}`}>{contact}</a>.</p>
 

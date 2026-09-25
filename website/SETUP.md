@@ -117,8 +117,11 @@ Then:
 ```powershell
 npx supabase secrets set --env-file .env.functions
 npx supabase functions deploy publisher --use-api
+npx supabase functions deploy studio-generate --use-api
 Copy-Item .env.publisher.example .env.publisher
 ```
+
+For the app's **Suggest description, category & tags** button, create an API key in [Google AI Studio](https://aistudio.google.com/apikey), then add it in Supabase **Edge Functions â†’ Secrets** as `GEMINI_API_KEY`. Keep this key in Supabase only; never put it in the desktop app, `.env.example`, or Git. Gemini's free tier and availability vary by model, account, and region; check the active quota in AI Studio. Google's [unpaid API terms](https://ai.google.dev/gemini-api/terms) allow submitted content to be used to improve Google services and reviewed by humans, so don't submit confidential images. Suggestions use the title and poster image, and should be reviewed before publishing.
 
 In private `.env.publisher`, set `SUPABASE_URL` and the same `PUBLISHER_SECRET`. Then run:
 

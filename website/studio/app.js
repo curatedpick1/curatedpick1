@@ -9,9 +9,39 @@ let localDrafts=[], localVersion=0, draftProject=null, mediaItems=[], previewUrl
 function tell(text, error = false) {const node = $('notice');node.textContent=text;node.classList.toggle('error',error);}
 function renderTags(){const list=$('tag-list');if(!list)return;list.replaceChildren();tagValues.forEach((tag,index)=>{const chip=document.createElement('span');chip.className='tag-chip';chip.textContent=tag;const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label',`Remove tag ${tag}`);remove.addEventListener('click',()=>{tagValues.splice(index,1);renderTags();dirty=true;});chip.append(remove);list.append(chip);});}
 function addTag(value){const tag=value.trim().replace(/^,+|,+$/g,'');if(!tag)return;if(tagValues.length>=12)throw new Error('Use up to 12 tags.');if(tag.length>40)throw new Error('Tags can be at most 40 characters.');if(!tagValues.some(item=>item.toLowerCase()===tag.toLowerCase()))tagValues.push(tag);renderTags();}
-function showPublishResult(product){if(!product)return;const url=`${connection.siteUrl}/products/${product.slug}/`;const project=new URL(connection.supabaseUrl).hostname.split('.')[0];$('result-product-link').href=url;$('result-supabase-link').href=`https://supabase.com/dashboard/project/${project}/editor?schema=public&table=products&row=${encodeURIComponent(product.id)}`;$('publish-result').hidden=false;$('result-done').focus();}
-function closePublishResult(){$('publish-result').hidden=true;}
+let resultReturnFocus=null;
+function showPublishResult(product){if(!product)return;const url=`${connection.siteUrl}/products/${product.slug}/`;const project=new URL(connection.supabaseUrl).hostname.split('.')[0];$('result-product-link').href=url;$('result-supabase-link').href=`https://supabase.com/dashboard/project/${project}/editor?schema=public&table=products&row=${encodeURIComponent(product.id)}`;$('result-pin-link').hidden=true;$('result-pin-link').removeAttribute('href');$('result-supabase-status').textContent='Yes — saved';$('result-website-status').textContent='Checking live page…';$('result-pinterest-status').textContent=product.publish_to_pinterest?'Queued — checking…':'No — not selected';$('result-title').textContent='Product saved';$('result-copy').textContent='Supabase saved it. Website and Pinterest status will update here.';resultReturnFocus=$('publish');$('publish-result').hidden=false;$('result-done').focus();void checkPublishStatuses(product);}
+function closePublishResult(){$('publish-result').hidden=true;resultReturnFocus?.focus?.();}
+function setResultStatus(id,text){$(id).textContent=text;}
+async function checkPublishStatuses(product){
+  let websiteDone=false,pinDone=!product.publish_to_pinterest;
+  if(pinDone)setResultStatus('result-pinterest-status','No — posting not selected');
+  const end=Date.now()+10*60*1000;
+  while(Date.now()<end&&!$('publish-result').hidden&&(!websiteDone||!pinDone)){
+    if(!websiteDone)try{
+      const response=await fetch(`${connection.siteUrl}/catalog-version.json?verify=${Date.now()}`,{cache:'no-store',signal:AbortSignal.timeout(10000)});
+      const live=response.ok?await response.json():null;const page=live?.products?.[product.id];websiteDone=Boolean(live&&!live.demo&&page?.slug===product.slug&&page?.revision===product.revision);
+      setResultStatus('result-website-status',websiteDone?'Yes — live':'Pending — waiting for live page');
+    }catch{setResultStatus('result-website-status','Pending — website check unavailable');}
+    if(!pinDone)try{
+      const current=await request('/rest/v1/rpc/get_editor_status',{method:'POST',body:'{}'});const job=current?.jobs?.find(item=>item.product_id===product.id);
+      if(job?.state==='published'&&job.pin_id){const pin=`https://www.pinterest.com/pin/${encodeURIComponent(job.pin_id)}/`;$('result-pin-link').href=pin;$('result-pin-link').hidden=false;setResultStatus('result-pinterest-status','Yes — posted');pinDone=true;}
+      else if(job&&['failed','needs_review','cancelled'].includes(job.state)){setResultStatus('result-pinterest-status',`No — ${job.state.replace('_',' ')}`);pinDone=true;}
+      else setResultStatus('result-pinterest-status',job?`Pending — ${job.state.replace('_',' ')}`:'Pending — waiting for publisher');
+    }catch{setResultStatus('result-pinterest-status','Pending — status check unavailable');}
+    if(!websiteDone||!pinDone)await new Promise(resolve=>setTimeout(resolve,12000));
+  }
+  if(!$('publish-result').hidden){if(!websiteDone)setResultStatus('result-website-status','Still pending — close and check again later');if(!pinDone)setResultStatus('result-pinterest-status','Still pending — publisher will retry automatically');}
+}
 function safeUrl(value) {const url=new URL(value);if(url.protocol!=='https:' || url.username || url.password || /\s/.test(value))throw new Error('Use a full HTTPS URL.');return url;}
+function detectStore(value){try{const host=new URL(value).hostname.toLowerCase().replace(/^www\./,'');if(host==='amzn.to'||host.startsWith('amazon.')||host.includes('.amazon.'))return 'Amazon';if(host==='walmart.com'||host.endsWith('.walmart.com'))return 'Walmart';if(host==='aliexpress.com'||host.endsWith('.aliexpress.com'))return 'AliExpress';if(host==='alibaba.com'||host.endsWith('.alibaba.com'))return 'Alibaba';if(host==='temu.com'||host.endsWith('.temu.com'))return 'Temu';if(host==='ebay.com'||host.endsWith('.ebay.com'))return 'eBay';if(host==='etsy.com'||host.endsWith('.etsy.com'))return 'Etsy';if(host==='target.com'||host.endsWith('.target.com'))return 'Target';if(host==='bestbuy.com'||host.endsWith('.bestbuy.com'))return 'Best Buy';if(host==='shein.com'||host.endsWith('.shein.com'))return 'Shein';}catch{}return 'Other';}
+async function generateDetails(){
+  const title=field('title').value.trim();const poster=mediaItems.find(item=>item.kind==='image');if(!title)throw new Error('Add a product title first.');if(!poster)throw new Error('Add a photo first.');if(!session)await connect();
+  let blob;if(poster.file)blob=poster.file;else{const imageUrl=new URL(poster.url);if(imageUrl.origin!==connection.supabaseUrl||!imageUrl.pathname.includes('/product-images/'))throw new Error('Re-add the product photo to generate suggestions.');const response=await fetch(imageUrl,{signal:AbortSignal.timeout(20000)});if(!response.ok)throw new Error('Could not load the saved photo. Re-add it and try again.');blob=await response.blob();}
+  if(blob.size>5*1024*1024)throw new Error('The photo must be under 5 MB for AI suggestions.');const mimeType=['image/jpeg','image/png','image/webp'].includes(blob.type)?blob.type:'image/jpeg';const bytes=new Uint8Array(await blob.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,i+0x8000));const imageBase64=btoa(binary);
+  const button=$('generate-details');button.disabled=true;button.textContent='Generating suggestions…';
+  try{const response=await fetch(`${connection.supabaseUrl}/functions/v1/studio-generate`,{method:'POST',headers:{apikey:connection.publishableKey,Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json'},body:JSON.stringify({title,mimeType,imageBase64}),signal:AbortSignal.timeout(90000)});const result=await response.json().catch(()=>null);if(!response.ok)throw new Error(result?.error||`Suggestion failed (${response.status}).`);field('description').value=result.description;field('category').value=result.category;tagValues=[];for(const tag of result.tags||[])addTag(tag);dirty=true;$('editor-title').textContent=title;document.querySelector('.optional-fields').open=true;tell('Description, category and tags suggested. Review and edit them before publishing.');field('description').focus();}finally{button.disabled=false;button.textContent='Suggest description, category & tags from title + photo';}
+}
 function readConnection(settings) {
   const url=safeUrl(settings.supabaseUrl || '');
   if(!/^[a-z0-9-]+\.supabase\.co$/.test(url.hostname) || url.port || url.pathname !== '/')throw new Error('Enter your Supabase project URL: https://your-project.supabase.co');
@@ -73,8 +103,8 @@ function legacyStoreRow(store={}) {
 }
 function storeRow(store={}) {
   const row=document.createElement('div');row.className='store-row';
-  const nameWrap=document.createElement('label');nameWrap.textContent='Store';const name=document.createElement('select');name.dataset.store='name';for(const value of ['Amazon','Walmart','AliExpress','Alibaba','Temu','eBay','Etsy','Target','Best Buy','Shein','Other']){const option=document.createElement('option');option.value=value;option.textContent=value;name.append(option);}name.value=store.name||'Amazon';nameWrap.append(name);row.append(nameWrap);
-  const urlWrap=document.createElement('label');urlWrap.textContent='Affiliate URL';const url=document.createElement('input');url.type='url';url.dataset.store='url';url.maxLength=2048;url.value=store.url||'';url.placeholder='https://...';urlWrap.append(url);row.append(urlWrap);
+  const nameWrap=document.createElement('label');nameWrap.textContent='Store';const name=document.createElement('select');name.dataset.store='name';for(const value of ['Amazon','Walmart','AliExpress','Alibaba','Temu','eBay','Etsy','Target','Best Buy','Shein','Other']){const option=document.createElement('option');option.value=value;option.textContent=value;name.append(option);}name.value=store.url?detectStore(store.url):(store.name||'Amazon');if(![...name.options].some(option=>option.value===name.value))name.value='Other';nameWrap.append(name);row.append(nameWrap);
+  const urlWrap=document.createElement('label');urlWrap.textContent='Affiliate URL';const url=document.createElement('input');url.type='url';url.dataset.store='url';url.maxLength=2048;url.value=store.url||'';url.placeholder='https://...';url.addEventListener('input',()=>{if(url.value.trim()){name.value=detectStore(url.value);dirty=true;}});urlWrap.append(url);row.append(urlWrap);
   const noteWrap=document.createElement('label');noteWrap.textContent='Optional note';noteWrap.className='store-note';const note=document.createElement('input');note.dataset.store='note';note.maxLength=120;note.value=store.note||'';note.placeholder='Variant, shipping, or a useful detail';noteWrap.append(note);noteWrap.hidden=true;row.append(noteWrap);
   const actions=document.createElement('div');actions.className='store-actions';if(!$('stores').children.length){const add=document.createElement('button');add.type='button';add.className='store-add';add.textContent='+ Add store';add.addEventListener('click',addStore);actions.append(add);}const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label','Remove store');remove.addEventListener('click',()=>{row.remove();dirty=true;});actions.append(remove);row.append(actions);$('stores').append(row);
 }
@@ -194,9 +224,11 @@ async function save(published) {
   try{await refresh();}catch{tell('Product saved, but status could not refresh. Use Refresh status to check it.');}
 }
 form.addEventListener('submit',event=>{event.preventDefault();void locked(()=>save(true));});
+$('generate-details').addEventListener('click',()=>void locked(generateDetails));
 $('save-draft').addEventListener('click',()=>void locked(()=>save(false)));
 $('copy-url').addEventListener('click',()=>void locked(async()=>{try{await navigator.clipboard.writeText($('product-url').value);tell('Product URL copied.');}catch{$('product-url').focus();$('product-url').select();tell('Select and copy the product URL above.');}}));
 $('close-result').addEventListener('click',closePublishResult);$('result-done').addEventListener('click',closePublishResult);$('publish-result').addEventListener('click',event=>{if(event.target.id==='publish-result')closePublishResult();});
+$('publish-result').addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closePublishResult();return;}if(event.key!=='Tab')return;const items=[...$('publish-result').querySelectorAll('button:not([disabled]),a[href]:not([hidden])')];if(!items.length)return;const first=items[0],last=items.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}});
 window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
 function showWorkspace() {
   $('workspace').hidden=false;$('connect-online').hidden=!!session;
