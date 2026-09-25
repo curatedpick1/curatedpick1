@@ -100,9 +100,9 @@ function renderJob() {
   $('pinterest-help').textContent=job?.last_error ? `Publisher: ${job.last_error}` : !status?.pinterest_connected?'Pinterest is not connected yet. Save products now; complete publisher and Pinterest setup to send queued Pins.':'Pinterest credentials are saved. Actual posting still depends on the scheduled publisher, API access, and live website.';
 }
 function renderList() {
-  const q=$('library-search').value.toLowerCase();$('product-list').replaceChildren();$('product-count').textContent=String(products.length);
-  const shown=products.filter(p=>`${p.title} ${p.category}`.toLowerCase().includes(q));
-  if(!shown.length){const p=document.createElement('p');p.className='note';p.textContent=!session?'Connect to see shared products.':products.length?'No matching products.':'No products yet. Start your first find.';$('product-list').append(p);}
+  const q=$('library-search').value.toLowerCase();const visible=products.filter(p=>p.published);$('product-list').replaceChildren();$('product-count').textContent=String(visible.length);
+  const shown=visible.filter(p=>`${p.title} ${p.category}`.toLowerCase().includes(q));
+  if(!shown.length){const p=document.createElement('p');p.className='note';p.textContent=!session?'Connect to see shared products.':visible.length?'No matching products.':'No published products yet.';$('product-list').append(p);}
   for(const p of shown){const b=document.createElement('button');b.type='button';b.className=`product-item${selected?.id===p.id?' active':''}`;const title=document.createElement('strong');title.textContent=p.title || 'Untitled draft';const info=document.createElement('span');const job=status?.jobs?.find(j=>j.product_id===p.id);info.textContent=`${p.published?'Published':'Draft'} · ${p.category}${job ? ` · Pin ${job.state}`:''}`;b.append(title,info);b.addEventListener('click',()=>{if(allowDiscard()){fill(p);tell('');}});$('product-list').append(b);}
 }
 async function refresh(reset=true) {
@@ -146,25 +146,24 @@ function payload(published,validate=true) {
   values.poster_alt=values.poster_alt || values.title;
   values.images=mediaItems.filter(item=>item.kind==='image' && item.url).map(item=>({url:item.url,pin_url:item.pinUrl || item.url,alt:item.alt || values.poster_alt}));
   if(field('tags').value.trim())addTag(field('tags').value);field('tags').value='';values.tags=[...tagValues];values.featured=field('featured').checked;values.publish_to_pinterest=field('publish_to_pinterest').checked;values.published=published;
-  values.stores=[...$('stores').children].map(row=>Object.fromEntries([...row.querySelectorAll('input')].map(input=>[input.dataset.store,input.value.trim()]))).filter(s=>s.name || s.url || s.note);
+  values.stores=[...$('stores').children].map(row=>Object.fromEntries([...row.querySelectorAll('[data-store]')].map(input=>[input.dataset.store,input.value.trim()]))).filter(s=>s.url || s.note);
   if(!validate)return values;
   if(!values.title)throw new Error('Give your product a title.');
   if(values.tags.length>12 || values.tags.some(t=>t.length>40))throw new Error('Use up to 12 tags, with at most 40 characters each.');
   if(values.pinterest_board_id && !/^\d+$/.test(values.pinterest_board_id))throw new Error('Use a numeric board ID, or leave it blank to choose automatically.');
-  for(const s of values.stores){if(!s.name)throw new Error('Add a name for every store.');safeUrl(s.url);}
+  for(const s of values.stores){s.name=s.name || 'Other';if(!s.url)throw new Error('Add an affiliate URL for every store.');safeUrl(s.url);}
   if(values.pin_image_url)safeUrl(values.pin_image_url);
   if(published){if(!values.description || !values.stores.length)throw new Error('Add a description and at least one store link.');if(!mediaItems.some(item=>item.kind==='image'))throw new Error('Add a photo or a video that can generate a poster.');}
   return values;
 }
 async function save(published) {
-  await saveLocal(false);
   if(!session)await connect();
   if(draftProject && draftProject!==connection.supabaseUrl)throw new Error('This draft belongs to a different Supabase project. Sign in to that project before saving it online.');
   if(!published && selected?.published && !confirm('Unpublish this product? Its public page will be removed immediately. Existing Pins will remain.'))return;
   // Check before uploading so an older backend cannot leave orphan media uploads.
   try{await request('/rest/v1/products?select=id,images&limit=0');}
   catch(error){if(error.code==='42703' || error.code==='PGRST204')throw new Error('Your draft is saved on this PC. This project needs its one-time gallery update before online publishing.');throw error;}
-  payload(published);draftProject=connection.supabaseUrl;await saveLocal(false);
+  payload(published);draftProject=connection.supabaseUrl;
   for(const media of mediaItems) {
     for(const [fileKey,urlKey] of media.kind==='video'?[['file','path']]:[['file','url'],['pinFile','pinUrl']]) {
       if(media[urlKey] || !media[fileKey])continue;
@@ -173,7 +172,7 @@ async function save(published) {
       tell(`Uploading ${file.name}… Your draft is saved on this PC.`);
       await request(`/storage/v1/object/${bucket}/${path}`,{method:'POST',headers:{'Content-Type':file.type,'x-upsert':'false'},body:file});
       media[urlKey]=video?path:`${connection.supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
-      syncMedia();await saveLocal(false);renderMedia();
+      syncMedia();renderMedia();
     }
   }
   const values=payload(published);const editing=selected;
@@ -188,7 +187,7 @@ async function save(published) {
     throw error;
   }
   if(!saved?.length)throw new Error('Another editor changed this product. Refresh and reopen it before saving. Your current edits are still in the form.');
-  try{await deleteDraft(createId,localVersion);await refreshLocal();}catch{fill(saved[0]);tell('Saved to Supabase. A local draft also remains; review it before deleting.',true);return;}
+  try{await deleteDraft(createId,localVersion);await refreshLocal();}catch{fill(saved[0]);}
   dirty=false;fill(saved[0]);
   tell(published?`Saved to Supabase. ${values.publish_to_pinterest?'Pin queued; the publisher checks the live page and posts it without a site deployment.':'The website is updated from Supabase.'}`:'Draft saved to Supabase.');
   if(published)showPublishResult(saved[0]);
