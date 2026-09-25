@@ -63,7 +63,7 @@ function syncMedia() {
   field('video_path').value=video?.path || '';
   field('pin_media_type').value=video?'video':'image';
 }
-function storeRow(store={}) {
+function legacyStoreRow(store={}) {
   const row=document.createElement('div');row.className='store-row';
   for(const [key,label,type,max] of [['name','Store','select',40],['url','Affiliate URL','url',2048],['note','Optional note','text',120]]) {
     const wrap=document.createElement('label');wrap.textContent=label;if(key==='note')wrap.className='store-note';
