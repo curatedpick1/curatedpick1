@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Curated Studio</title><link rel="icon" href="/logo.svg"><link rel="stylesheet" href="/style.css"><script src="/app.js" type="module"></script>
+  <title>Curated Studio</title><link rel="icon" href="/logo.svg"><link rel="stylesheet" href="/style.css"><style>.required-mark,.optional-mark{font-size:10px;letter-spacing:.04em;color:#006b5b;margin-left:5px}.optional-mark{color:#607184}.inline-action{margin-top:9px;font-size:11px;padding:7px 10px}.store-actions{display:flex;align-items:center;gap:6px}.store-actions button{padding:8px 10px}.store-actions .store-add{color:#006b5b}.tag-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.tag-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid #b9d7cb;border-radius:20px;background:#e7f4ee;color:#145247;padding:4px 8px;font-size:11px}.tag-chip button{border:0;background:transparent;color:inherit;padding:0;font-size:15px;line-height:1}.modal-backdrop{position:fixed;inset:0;display:grid;place-items:center;padding:24px;background:rgba(20,40,60,.42);z-index:20}.result-modal{position:relative;width:min(520px,100%);background:#fff;border:1px solid #dce3eb;border-radius:18px;padding:30px;box-shadow:0 24px 70px rgba(20,40,60,.24)}.result-modal h2{font-size:28px}.result-modal>p:not(.eyebrow){color:#607184}.modal-close{position:absolute;top:14px;right:14px;border:0;padding:4px 9px;font-size:22px;background:transparent}.result-links{display:grid;gap:9px;margin:22px 0}.result-links a{display:block;border:1px solid #d4dee8;border-radius:9px;padding:11px 13px;color:#006b5b;font-weight:650;text-decoration:none}.result-modal>.primary{width:100%}</style><script src="/app.js" type="module"></script>
 </head>
 <body>
 <header><a class="brand" href="/"><img src="/logo.svg" width="32" height="32" alt="">The Curated Pick <span>STUDIO</span></a><div class="actions"><button id="connect-online" hidden>Reconnect</button></div></header>
@@ -17,19 +17,20 @@
       </aside>
       <form novalidate id="product-form" class="panel editor">
         <div class="editor-heading"><div><p class="eyebrow" id="editor-label">NEW PRODUCT</p><h2 id="editor-title">New product</h2></div><span id="job-state" class="badge">Draft</span></div>
-        <label>Title<input name="title" maxlength="100" required placeholder="Product name"></label>
-        <label>Description<textarea name="description" maxlength="440" rows="3" placeholder="What makes it useful?"></textarea><small>Used on your website and Pin.</small></label>
+        <label>Title <span class="required-mark">Required</span><input name="title" maxlength="100" required aria-required="true" placeholder="Product name"></label>
+        <label>Description <span class="required-mark">Required</span><textarea name="description" maxlength="440" rows="3" required aria-required="true" placeholder="What makes it useful?"></textarea><small>Used on your website and Pin.</small></label>
         <section class="form-section">
           <div class="section-title"><h3>Photos &amp; video</h3><span>Up to 10 photos + 1 video</span></div>
-          <label class="media-upload">Add files<input id="media-files" type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/x-m4v"></label>
+          <label class="media-upload">Poster, photos, or video <span class="required-mark">Required to publish</span><input id="media-files" type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/x-m4v"></label>
+          <button type="button" id="add-media-more" class="inline-action">+ Add another image/video</button>
           <small>Upload photos, a video, or both. The first photo is your poster. Sizes are prepared automatically. Up to 20 MB per file.</small>
           <div id="media-list" class="media-list" aria-label="Product media"></div>
           <small id="media-summary" role="status"></small>
           <input type="hidden" name="poster_url"><input type="hidden" name="pin_image_url"><input type="hidden" name="video_path"><input type="hidden" name="pin_media_type">
         </section>
-        <section class="form-section"><div class="section-title"><h3>Affiliate links</h3><button type="button" id="add-store">+ Add store</button></div><div id="stores"></div></section>
+        <section class="form-section"><div class="section-title"><h3>Affiliate links <span class="required-mark">Required to publish</span></h3><span>These become the store buttons on your website.</span></div><div id="stores"></div></section>
         <details class="optional-fields"><summary>Optional details</summary>
-          <div class="field-grid"><label>Category<input name="category" list="categories" maxlength="40" value="Home & living"><datalist id="categories"><option>Home & living</option><option>Tech & desk</option><option>Kitchen & dining</option><option>On the go</option><option>Style & essentials</option></datalist></label><label>Tags<input name="tags" placeholder="desk, lighting"><small>Up to 12, separated by commas.</small></label></div>
+          <div class="field-grid"><label>Category <span class="required-mark">Required</span><select name="category" required aria-required="true"><option>Home & living</option><option>Tech & desk</option><option>Kitchen & dining</option><option>On the go</option><option>Style & essentials</option><option>Beauty & care</option><option>Fashion</option><option>Travel</option><option>Fitness & wellness</option><option>Baby & kids</option><option>Pets</option><option>Office & study</option><option>Gifts</option><option>Outdoor</option><option>Gaming</option><option>Automotive</option><option>Deals</option></select></label><label>Tags <span class="optional-mark">Optional</span><input name="tags" placeholder="Type a tag, then press Enter"><div id="tag-list" class="tag-list" aria-live="polite"></div><small>Add each tag with Enter. Up to 12 tags.</small></label></div>
           <label>Pinterest board ID — optional<input name="pinterest_board_id" inputmode="numeric" pattern="[0-9]*" placeholder="Use the account’s default board"><small>Leave blank to choose automatically from your connected account.</small></label>
           <label>Image description — optional<input name="poster_alt" maxlength="500" placeholder="Uses the product title if left blank"></label>
           <label class="toggle"><input name="featured" type="checkbox"> Feature on homepage</label>
@@ -41,5 +42,6 @@
     </div>
   </section>
 </main>
+<div id="publish-result" class="modal-backdrop" hidden><section class="result-modal" role="dialog" aria-modal="true" aria-labelledby="result-title"><button type="button" class="modal-close" id="close-result" aria-label="Close publish result">×</button><p class="eyebrow">PUBLISHED</p><h2 id="result-title">Product is live</h2><p id="result-copy">Saved to Supabase and ready on your website.</p><div class="result-links"><a id="result-product-link" target="_blank" rel="noopener noreferrer">Open product page ↗</a><a id="result-supabase-link" target="_blank" rel="noopener noreferrer">Open Supabase row ↗</a></div><button type="button" class="primary" id="result-done">Done</button></section></div>
 </body>
 </html>

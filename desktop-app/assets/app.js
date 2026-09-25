@@ -5,8 +5,12 @@ const form = $('product-form');
 const field = name => form.elements.namedItem(name);
 let connection, session, products = [], status, selected, createId, dirty = false, busy = false, offset = 0;
 const pageSize = 100;
-let localDrafts=[], localVersion=0, draftProject=null, mediaItems=[], previewUrls=[], hasForm=false, lastBoard='';
+let localDrafts=[], localVersion=0, draftProject=null, mediaItems=[], previewUrls=[], hasForm=false, lastBoard='', tagValues=[];
 function tell(text, error = false) {const node = $('notice');node.textContent=text;node.classList.toggle('error',error);}
+function renderTags(){const list=$('tag-list');if(!list)return;list.replaceChildren();tagValues.forEach((tag,index)=>{const chip=document.createElement('span');chip.className='tag-chip';chip.textContent=tag;const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label',`Remove tag ${tag}`);remove.addEventListener('click',()=>{tagValues.splice(index,1);renderTags();dirty=true;});chip.append(remove);list.append(chip);});}
+function addTag(value){const tag=value.trim().replace(/^,+|,+$/g,'');if(!tag)return;if(tagValues.length>=12)throw new Error('Use up to 12 tags.');if(tag.length>40)throw new Error('Tags can be at most 40 characters.');if(!tagValues.some(item=>item.toLowerCase()===tag.toLowerCase()))tagValues.push(tag);renderTags();}
+function showPublishResult(product){if(!product)return;const url=`${connection.siteUrl}/products/${product.slug}/`;const project=new URL(connection.supabaseUrl).hostname.split('.')[0];$('result-product-link').href=url;$('result-supabase-link').href=`https://supabase.com/dashboard/project/${project}/editor?schema=public&table=products&row=${encodeURIComponent(product.id)}`;$('publish-result').hidden=false;$('result-done').focus();}
+function closePublishResult(){$('publish-result').hidden=true;}
 function safeUrl(value) {const url=new URL(value);if(url.protocol!=='https:' || url.username || url.password || /\s/.test(value))throw new Error('Use a full HTTPS URL.');return url;}
 function readConnection(settings) {
   const url=safeUrl(settings.supabaseUrl || '');
@@ -61,18 +65,26 @@ function syncMedia() {
 }
 function storeRow(store={}) {
   const row=document.createElement('div');row.className='store-row';
-  for(const [key,label,type,max] of [['name','Store name','text',40],['url','Affiliate URL','url',2048],['note','Optional note','text',120]]) {
+  for(const [key,label,type,max] of [['name','Store','select',40],['url','Affiliate URL','url',2048],['note','Optional note','text',120]]) {
     const wrap=document.createElement('label');wrap.textContent=label;if(key==='note')wrap.className='store-note';
     const input=document.createElement('input');input.type=type;input.maxLength=max;input.dataset.store=key;input.value=store[key] || '';input.placeholder=key==='name'?'Amazon':key==='url'?'https://…':'Variant, shipping, or a useful detail';wrap.append(input);if(key==='note')wrap.hidden=true;row.append(wrap);
   }
   const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label','Remove store');remove.addEventListener('click',()=>{row.remove();dirty=true;});row.append(remove);$('stores').append(row);
 }
+function storeRow(store={}) {
+  const row=document.createElement('div');row.className='store-row';
+  const nameWrap=document.createElement('label');nameWrap.textContent='Store';const name=document.createElement('select');name.dataset.store='name';for(const value of ['Amazon','Walmart','AliExpress','Alibaba','Temu','eBay','Etsy','Target','Best Buy','Shein','Other']){const option=document.createElement('option');option.value=value;option.textContent=value;name.append(option);}name.value=store.name||'Amazon';nameWrap.append(name);row.append(nameWrap);
+  const urlWrap=document.createElement('label');urlWrap.textContent='Affiliate URL';const url=document.createElement('input');url.type='url';url.dataset.store='url';url.maxLength=2048;url.value=store.url||'';url.placeholder='https://...';urlWrap.append(url);row.append(urlWrap);
+  const noteWrap=document.createElement('label');noteWrap.textContent='Optional note';noteWrap.className='store-note';const note=document.createElement('input');note.dataset.store='note';note.maxLength=120;note.value=store.note||'';note.placeholder='Variant, shipping, or a useful detail';noteWrap.append(note);noteWrap.hidden=true;row.append(noteWrap);
+  const actions=document.createElement('div');actions.className='store-actions';if(!$('stores').children.length){const add=document.createElement('button');add.type='button';add.className='store-add';add.textContent='+ Add store';add.addEventListener('click',addStore);actions.append(add);}const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label','Remove store');remove.addEventListener('click',()=>{row.remove();dirty=true;});actions.append(remove);row.append(actions);$('stores').append(row);
+}
+function addStore(){if($('stores').children.length>=8){tell('You can add up to eight stores.',true);return;}storeRow();dirty=true;$('stores').lastElementChild?.querySelector('[data-store="name"]')?.focus();}
 function fill(product, draft) {
   hasForm=true;selected=product;createId=draft?.id || crypto.randomUUID();localVersion=draft?.version || 0;draftProject=draft?.project || (product?connection.supabaseUrl:null);form.reset();$('stores').replaceChildren();
   const source=draft?.values || product || {title:'',description:'',category:'Home & living',tags:[],stores:[],pin_media_type:'image',publish_to_pinterest:true,pinterest_board_id:lastBoard};
   mediaItems=restoreMedia(source,draft?.media);
   for(const name of ['title','description','category','poster_url','poster_alt','pin_media_type','pinterest_board_id','pin_image_url','video_path'])field(name).value=source[name] || '';
-  field('tags').value=(source.tags || []).join(', ');
+  tagValues=[...(source.tags || [])];field('tags').value='';renderTags();
   for(const name of ['featured','publish_to_pinterest'])field(name).checked=!!source[name];
   (source.stores.length?source.stores:[{}]).forEach(storeRow);
   $('editor-label').textContent=draft?'LOCAL DRAFT':product?'EDIT PRODUCT':'NEW PRODUCT';$('editor-title').textContent=source.title || 'New product';
@@ -105,7 +117,9 @@ $('new-product').addEventListener('click',()=>{if(allowDiscard()){fill();tell(''
 $('library-search').addEventListener('input',renderList);
 $('refresh').addEventListener('click',()=>void locked(async()=>{await refresh();tell('Status refreshed. Your unsaved form edits are preserved.');}));
 $('load-more').addEventListener('click',()=>void locked(()=>refresh(false)));
-$('add-store').addEventListener('click',()=>{if($('stores').children.length>=8){tell('You can add up to eight stores.',true);return;}storeRow();dirty=true;});
+if($('add-store'))$('add-store').addEventListener('click',addStore);
+field('tags').addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===','){event.preventDefault();try{addTag(field('tags').value);field('tags').value='';dirty=true;}catch(error){tell(error.message,true);}}});
+field('tags').addEventListener('blur',()=>{if(field('tags').value.trim()){try{addTag(field('tags').value);field('tags').value='';}catch(error){tell(error.message,true);}}});
 form.addEventListener('input',()=>{dirty=true;});
 field('pinterest_board_id').addEventListener('change',()=>{const board=field('pinterest_board_id').value.trim();if(!board || /^\d+$/.test(board)){lastBoard=board;try{localStorage.setItem('curated-studio-board',board);}catch{}}});
 async function stageMedia(files) {
@@ -123,14 +137,15 @@ async function stageMedia(files) {
   }
   mediaItems=next;dirty=true;syncMedia();renderMedia();tell('Media ready. The first photo is used as the poster for your website and Pinterest.');
 }
-$('media-files').addEventListener('change',()=>{const files=[...$('media-files').files];$('media-files').value='';void locked(()=>stageMedia(files));});
+$('media-files').addEventListener('change',()=>{const files=[...$('media-files').files];$('media-files').value='';void locked(async()=>{await stageMedia(files);$('add-media-more').focus();});});
+$('add-media-more').addEventListener('click',()=>$('media-files').click());
 function payload(published,validate=true) {
   syncMedia();
   const values={};for(const name of ['title','description','category','poster_url','poster_alt','pin_media_type'])values[name]=field(name).value.trim();
   for(const name of ['pinterest_board_id','pin_image_url','video_path'])values[name]=field(name).value.trim() || null;
   values.poster_alt=values.poster_alt || values.title;
   values.images=mediaItems.filter(item=>item.kind==='image' && item.url).map(item=>({url:item.url,pin_url:item.pinUrl || item.url,alt:item.alt || values.poster_alt}));
-  values.tags=field('tags').value.split(',').map(x=>x.trim()).filter(Boolean);values.featured=field('featured').checked;values.publish_to_pinterest=field('publish_to_pinterest').checked;values.published=published;
+  if(field('tags').value.trim())addTag(field('tags').value);field('tags').value='';values.tags=[...tagValues];values.featured=field('featured').checked;values.publish_to_pinterest=field('publish_to_pinterest').checked;values.published=published;
   values.stores=[...$('stores').children].map(row=>Object.fromEntries([...row.querySelectorAll('input')].map(input=>[input.dataset.store,input.value.trim()]))).filter(s=>s.name || s.url || s.note);
   if(!validate)return values;
   if(!values.title)throw new Error('Give your product a title.');
@@ -176,11 +191,13 @@ async function save(published) {
   try{await deleteDraft(createId,localVersion);await refreshLocal();}catch{fill(saved[0]);tell('Saved to Supabase. A local draft also remains; review it before deleting.',true);return;}
   dirty=false;fill(saved[0]);
   tell(published?`Saved to Supabase. ${values.publish_to_pinterest?'Pin queued; the publisher checks the live page and posts it without a site deployment.':'The website is updated from Supabase.'}`:'Draft saved to Supabase.');
+  if(published)showPublishResult(saved[0]);
   try{await refresh();}catch{tell('Product saved, but status could not refresh. Use Refresh status to check it.');}
 }
 form.addEventListener('submit',event=>{event.preventDefault();void locked(()=>save(true));});
 $('save-draft').addEventListener('click',()=>void locked(()=>save(false)));
 $('copy-url').addEventListener('click',()=>void locked(async()=>{try{await navigator.clipboard.writeText($('product-url').value);tell('Product URL copied.');}catch{$('product-url').focus();$('product-url').select();tell('Select and copy the product URL above.');}}));
+$('close-result').addEventListener('click',closePublishResult);$('result-done').addEventListener('click',closePublishResult);$('publish-result').addEventListener('click',event=>{if(event.target.id==='publish-result')closePublishResult();});
 window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
 function showWorkspace() {
   $('workspace').hidden=false;$('connect-online').hidden=!!session;
