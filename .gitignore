@@ -8,3 +8,4 @@ coverage/
 !.env.example
 !archive/**/.env.example
 archive/legacy-vite/build-output/
+desktop-app/setup.zip
