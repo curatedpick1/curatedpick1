@@ -1,6 +1,6 @@
 CURATED STUDIO — WINDOWS APP
 
-Install distribution/Curated-Studio-Setup-1.4.0.exe, then open Curated Studio from your desktop or Start menu.
+Install distribution/Curated-Studio-Setup-1.5.0.exe, then open Curated Studio from your desktop or Start menu.
 Send that same installer to another Windows PC. Node.js and terminal commands are not needed.
 This is an unsigned private build, so Windows may show an unknown-publisher notice.
 Open the app and publish. No password, signup or settings are needed.
@@ -13,7 +13,7 @@ The website shows all photos. Photo Pins use up to five; mixed uploads become a 
 Both PCs publish to the same Supabase project. Drafts stay on the PC/app where you saved them.
 Existing browser drafts stay in localhost; they are not automatically moved into the desktop app.
 Pinterest still needs its account connection and publishing automation configured. After the one-time Worker migration, rebuild this installer with that Worker URL so product links point to the live site. Product changes appear on the Worker site without a website deployment.
-Version 1.4 adds an optional product blog with headings, underlined notes, and centered product photos. Version 1.3 added Daraz, more categories, and required tags/category. It requires migration 202609260001_product_blog.sql after product-media migration 202609230004_product_media.sql. The publisher must also be deployed to the project's Supabase backend.
+Version 1.5 adds automatic editable AI suggestions, a compact photo-first form, and a rich-text optional product blog. Run migrations 202609260001_product_blog.sql and 202609260002_product_rich_blog.sql in order. Automatic suggestions use the already-configured Supabase studio-generate function and its Gemini secret; without that secret, product publishing still works but suggestions are unavailable. Version 1.4 added an optional product blog. Version 1.3 added Daraz, more categories, and required tags/category. The publisher must also be deployed to the project's Supabase backend.
 
 To run or rebuild from source, install Node.js 24. From the Curated folder, run:
 

@@ -4,7 +4,8 @@ export type ProductBlogBlock =
   | { type: 'heading'; text: string }
   | { type: 'paragraph'; text: string }
   | { type: 'underline'; text: string }
-  | { type: 'image'; url: string; alt: string };
+  | { type: 'image'; url: string; alt: string; align?: 'left' | 'center' | 'right' }
+  | { type: 'rich_text'; tag: 'p' | 'h2' | 'h3'; align: 'left' | 'center' | 'right'; runs: { text: string; bold?: boolean; italic?: boolean; underline?: boolean; size?: 'small' | 'normal' | 'large' | 'xlarge'; font?: 'Arial' | 'Impact' | 'Georgia' | 'Verdana' | 'Trebuchet MS' | 'Times New Roman' | 'Courier New' }[] };
 export interface Product {
   id: string;
   slug: string;
@@ -52,6 +53,14 @@ export function validateProduct(value: unknown, demo = false): Product {
       if (block.type === 'image') {
         httpsUrl(block.url);
         if (typeof block.alt !== 'string' || block.alt.length > 500) throw new Error(`Invalid blog image: ${p.slug}`);
+      } else if (block.type === 'rich_text') {
+        if (!['p','h2','h3'].includes(block.tag) || !['left','center','right'].includes(block.align) || !Array.isArray(block.runs) || block.runs.length > 300) throw new Error(`Invalid rich blog text: ${p.slug}`);
+        let length = 0;
+        for (const run of block.runs) {
+          if (!run || typeof run.text !== 'string' || !run.text.trim() || (run.bold !== undefined && typeof run.bold !== 'boolean') || (run.italic !== undefined && typeof run.italic !== 'boolean') || (run.underline !== undefined && typeof run.underline !== 'boolean') || (run.size !== undefined && !['small','normal','large','xlarge'].includes(run.size)) || (run.font !== undefined && !['Arial','Impact','Georgia','Verdana','Trebuchet MS','Times New Roman','Courier New'].includes(run.font))) throw new Error(`Invalid rich blog run: ${p.slug}`);
+          length += run.text.length;
+        }
+        if (!length || length > 2400) throw new Error(`Invalid rich blog text length: ${p.slug}`);
       } else if (['heading', 'paragraph', 'underline'].includes(block.type)) {
         if (typeof block.text !== 'string' || !block.text.trim() || block.text.length > (block.type === 'heading' ? 160 : 2400)) throw new Error(`Invalid blog text: ${p.slug}`);
       } else throw new Error(`Invalid blog block type: ${p.slug}`);

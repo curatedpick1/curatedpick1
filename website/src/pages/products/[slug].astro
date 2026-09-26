@@ -45,10 +45,14 @@ const otherStores=product?.stores.filter(store=>store!==primaryStore) || [];
   {product.blog_content?.length && <article class="product-blog wrap" aria-labelledby="product-blog-title">
     <header><p class="eyebrow">THE STORY BEHIND THE FIND</p><h2 id="product-blog-title">{product.blog_title}</h2></header>
     <div class="product-blog-body">{product.blog_content.map(block => {
+      if (block.type === 'image') return <figure style={`text-align:${block.align || 'center'};justify-content:${block.align === 'left' ? 'flex-start' : block.align === 'right' ? 'flex-end' : 'center'}`}><img src={block.url} alt={block.alt} loading="lazy" /></figure>;
+      if (block.type === 'rich_text') {
+        const Tag = block.tag;
+        return <Tag class={`blog-rich-text ${block.tag === 'p' ? 'blog-rich-paragraph' : ''}`} style={`text-align:${block.align}`}>{block.runs.map(run => <span class:list={[run.bold && 'blog-bold',run.italic && 'blog-italic',run.underline && 'blog-underlined',run.size && `blog-size-${run.size}`,run.font && `blog-font-${run.font.toLowerCase().replaceAll(' ','-')}`]}>{run.text}</span>)}</Tag>;
+      }
       if (block.type === 'heading') return <h3>{block.text}</h3>;
       if (block.type === 'paragraph') return <p>{block.text}</p>;
-      if (block.type === 'underline') return <p class="blog-underline"><u>{block.text}</u></p>;
-      return <figure><img src={block.url} alt={block.alt} loading="lazy" /></figure>;
+      return <p class="blog-underline"><u>{block.text}</u></p>;
     })}</div>
   </article>}
 </Layout>

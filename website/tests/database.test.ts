@@ -10,6 +10,7 @@ test('database enforces private writes, draft isolation, permanent URLs, queue u
     await db.exec(await readFile(new URL('../supabase/migrations/202609080001_catalog.sql', import.meta.url), 'utf8'));
     await db.exec(await readFile(new URL('../supabase/migrations/202609230004_product_media.sql', import.meta.url), 'utf8'));
     await db.exec(await readFile(new URL('../supabase/migrations/202609260001_product_blog.sql', import.meta.url), 'utf8'));
+    await db.exec(await readFile(new URL('../supabase/migrations/202609260002_product_rich_blog.sql', import.meta.url), 'utf8'));
     const inserted = await db.query<{ id: string; slug: string }>(`insert into products(title) values ('Warm desk lamp') returning id,slug`);
     const { id, slug } = inserted.rows[0];
     assert.ok(slug.startsWith('warm-desk-lamp-'));
@@ -31,6 +32,12 @@ test('database enforces private writes, draft isolation, permanent URLs, queue u
     assert.ok(!('pinterest_board_id' in live.products[0]));
     assert.equal(live.products[0].blog_title, 'How to choose a reading lamp');
     assert.equal(live.products[0].blog_content.length, 4);
+    await db.exec('reset role');
+    const rich = [{ type: 'rich_text', tag: 'p', align: 'center', runs: [{ text: 'Useful ', bold: true, font: 'Georgia' }, { text: 'details', italic: true, underline: true, size: 'large' }] }];
+    await db.query('update products set blog_content=$2::jsonb where id=$1', [id, JSON.stringify(rich)]);
+    assert.deepEqual((await db.query('select blog_content from products where id=$1', [id])).rows[0].blog_content, rich);
+    await assert.rejects(() => db.query(`update products set blog_content='[{"type":"rich_text","tag":"p","align":"center","runs":[{"text":"unsafe","font":"Comic Sans"}]}]' where id=$1`, [id]), /check constraint/);
+    await db.exec('set role anon');
     await assert.rejects(() => db.query("insert into products(title) values ('injected')"), /permission denied/);
     await db.exec('reset role; set role authenticated');
     await assert.rejects(() => db.query("update products set title='injected'"), /permission denied/);

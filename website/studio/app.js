@@ -9,17 +9,45 @@ let localDrafts=[], localVersion=0, draftProject=null, mediaItems=[], previewUrl
 function tell(text, error = false) {const node = $('notice');node.textContent=text;node.classList.toggle('error',error);}
 function renderTags(){const list=$('tag-list');if(!list)return;list.replaceChildren();tagValues.forEach((tag,index)=>{const chip=document.createElement('span');chip.className='tag-chip';chip.textContent=tag;const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label',`Remove tag ${tag}`);remove.addEventListener('click',()=>{tagValues.splice(index,1);renderTags();dirty=true;});chip.append(remove);list.append(chip);});}
 function addTag(value){const tag=value.trim().replace(/^,+|,+$/g,'');if(!tag)return;if(tagValues.length>=12)throw new Error('Use up to 12 tags.');if(tag.length>40)throw new Error('Tags can be at most 40 characters.');if(!tagValues.some(item=>item.toLowerCase()===tag.toLowerCase()))tagValues.push(tag);renderTags();}
-function collectBlogBlocks(includeEmpty=false){return [...$('blog-block-list').querySelectorAll('[data-blog-block]')].map(row=>{const type=row.dataset.type;if(type==='image')return{type,mediaIndex:row.querySelector('[data-blog-media]').value,alt:row.querySelector('[data-blog-alt]').value.trim()};return{type,text:row.querySelector('[data-blog-text]').value.trim()};}).filter(block=>includeEmpty||(block.type==='image'?block.mediaIndex!=='':Boolean(block.text)));}
-function renderBlogBlocks(blocks=blogBlocks){blogBlocks=blocks;$('blog-block-list').replaceChildren();if(!blocks.length){const note=document.createElement('p');note.className='blog-empty';note.textContent='No blog content. The product page will not show a blog section.';$('blog-block-list').append(note);return;}
-  const names={heading:'Heading',paragraph:'Paragraph',underline:'Underlined note',image:'Centered photo'};
-  blocks.forEach((block,index)=>{const row=document.createElement('section');row.className='blog-block';row.dataset.blogBlock='';row.dataset.type=block.type;const head=document.createElement('div');head.className='blog-block-head';const title=document.createElement('strong');title.textContent=names[block.type]||'Blog content';head.append(title);const actions=document.createElement('div');actions.className='blog-block-actions';for(const [label,delta] of [['Move up',-1],['Move down',1]]){const button=document.createElement('button');button.type='button';button.textContent=delta<0?'Move up':'Move down';button.setAttribute('aria-label',label);button.disabled=index+delta<0||index+delta>=blocks.length;button.addEventListener('click',()=>{const next=collectBlogBlocks(true);[next[index],next[index+delta]]=[next[index+delta],next[index]];dirty=true;renderBlogBlocks(next);});actions.append(button);}const remove=document.createElement('button');remove.type='button';remove.textContent='Remove';remove.addEventListener('click',()=>{const next=collectBlogBlocks(true);next.splice(index,1);dirty=true;renderBlogBlocks(next);});actions.append(remove);head.append(actions);row.append(head);
-    if(block.type==='image'){const label=document.createElement('label');label.textContent='Product photo';const select=document.createElement('select');select.dataset.blogMedia='';const prompt=document.createElement('option');prompt.value='';prompt.textContent='Choose a photo';select.append(prompt);let photoNumber=0;mediaItems.forEach((item,mediaIndex)=>{if(item.kind!=='image')return;photoNumber++;const option=document.createElement('option');option.value=String(mediaIndex);option.textContent=`Photo ${photoNumber}${item.file?.name?` ? ${item.file.name}`:''}`;select.append(option);});select.value=block.mediaIndex==null?'':String(block.mediaIndex);label.append(select);row.append(label);const altLabel=document.createElement('label');altLabel.textContent='Photo description';const alt=document.createElement('input');alt.type='text';alt.maxLength=500;alt.dataset.blogAlt='';alt.value=block.alt||'';alt.placeholder='Briefly describe the photo';altLabel.append(alt);row.append(altLabel);}
-    else{const label=document.createElement('label');label.textContent=block.type==='heading'?'Heading text':block.type==='underline'?'Underlined text':'Paragraph text';const input=document.createElement(block.type==='heading'?'input':'textarea');input.dataset.blogText='';input.maxLength=block.type==='heading'?160:2400;input.value=block.text||'';if(input instanceof HTMLTextAreaElement)input.rows=block.type==='underline'?2:4;input.placeholder=block.type==='heading'?'A clear section heading':block.type==='underline'?'A short detail worth emphasizing':'Write useful, original information for shoppers';label.append(input);row.append(label);}
-    $('blog-block-list').append(row);
-  });
+let generatedDetails={description:'',category:'',tags:[]}, autoFillTimer, autoFillBusy=false;
+const blogFonts=new Set(['Arial','Impact','Georgia','Verdana','Trebuchet MS','Times New Roman','Courier New']);
+function collectBlogBlocks(local=false){
+  const editor=$('blog-editor');if(!editor)return[];const blocks=[];
+  const alignment=node=>['left','center','right'].includes(node?.style?.textAlign)?node.style.textAlign:'left';
+  function walk(node,style,runs){
+    if(node.nodeType===Node.TEXT_NODE){const text=node.nodeValue||'';if(text)runs.push({text,...(style.bold?{bold:true}:{}),...(style.italic?{italic:true}:{}),...(style.underline?{underline:true}:{}),...(style.font?{font:style.font}:{}),...(style.size?{size:style.size}:{})});return;}
+    if(node.nodeType!==Node.ELEMENT_NODE)return;
+    const el=node,tag=el.tagName.toLowerCase(),next={...style};if(tag==='b'||tag==='strong')next.bold=true;if(tag==='i'||tag==='em')next.italic=true;if(tag==='u')next.underline=true;
+    const declaredFont=el.style?.fontFamily||el.getAttribute?.('face')||'';if(declaredFont){const font=[...blogFonts].find(f=>declaredFont.toLowerCase().includes(f.toLowerCase()));if(font)next.font=font;}
+    const px=parseInt(el.style?.fontSize||'');if(['small','normal','large','xlarge'].includes(el.dataset?.size))next.size=el.dataset.size;else if(px)next.size=px<=12?'small':px<=16?'normal':px<=22?'large':'xlarge';
+    for(const child of el.childNodes)walk(child,next,runs);
+  }
+  function emitText(node,tag){const runs=[];walk(node,{},runs);const text=runs.map(r=>r.text).join('').trim();if(!text)return;blocks.push({type:'rich_text',tag:['h2','h3'].includes(tag)?tag:'p',align:alignment(node),runs});}
+  for(const node of editor.childNodes){
+    if(node.nodeType===Node.TEXT_NODE){emitText(node,'p');continue;}
+    if(node.nodeType!==Node.ELEMENT_NODE)continue;
+    const tag=node.tagName.toLowerCase(),img=node.matches('img[data-media-index]')?node:node.querySelector('img[data-media-index]');
+    if(img){const index=Number(img.dataset.mediaIndex),item=mediaItems[index];if(item){blocks.push(local?{type:'image',media_index:index,alt:img.alt||''}:{type:'image',url:item.url,alt:img.alt||item.alt||field('title').value.trim(),align:alignment(node)});}continue;}
+    emitText(node,tag);
+  }
+  return blocks;
 }
-function addBlogBlock(type){if(blogBlocks.length>=40){tell('Use up to 40 blog sections.',true);return;}if(type==='image'&&!mediaItems.some(item=>item.kind==='image')){tell('Add a product photo first, then choose it for the blog.',true);return;}blogBlocks=collectBlogBlocks(true);blogBlocks.push(type==='image'?{type,mediaIndex:'',alt:''}:{type,text:''});dirty=true;renderBlogBlocks(blogBlocks);$('blog-block-list').lastElementChild?.querySelector('input,textarea,select')?.focus();}
-
+function blogTextElement(tag,align){const el=document.createElement(['h2','h3'].includes(tag)?tag:'p');el.style.textAlign=['left','center','right'].includes(align)?align:'left';return el;}
+function renderBlogBlocks(blocks=[]){const editor=$('blog-editor');if(!editor)return;editor.replaceChildren();
+  for(const block of blocks){
+    if(block.type==='image'){const index=Number(block.media_index??block.mediaIndex);const item=mediaItems[index]||mediaItems.find(value=>value.url===block.url);if(!item)continue;const wrap=document.createElement('p');wrap.style.textAlign=block.align||'center';const img=document.createElement('img');img.dataset.mediaIndex=String(mediaItems.indexOf(item));img.alt=block.alt||'';img.src=item.file?URL.createObjectURL(item.file):item.url;img.style.maxWidth='100%';wrap.append(img);editor.append(wrap);continue;}
+    const tag=block.type==='heading'?'h2':block.type==='rich_text'?block.tag:'p';const el=blogTextElement(tag,block.align);
+    if(block.type==='rich_text'&&Array.isArray(block.runs)){for(const run of block.runs){const span=document.createElement('span');span.textContent=run.text||'';if(run.bold)span.style.fontWeight='700';if(run.italic)span.style.fontStyle='italic';if(run.underline)span.style.textDecoration='underline';if(blogFonts.has(run.font))span.style.fontFamily=run.font;if(['small','normal','large','xlarge'].includes(run.size))span.dataset.size=run.size;el.append(span);}}
+    else{const span=document.createElement('span');span.textContent=block.text||'';if(block.type==='underline')span.style.textDecoration='underline';el.append(span);}
+    editor.append(el);
+  }
+  refreshBlogImageOptions();
+}
+function refreshBlogImageOptions(){const select=$('blog-image-source');if(!select)return;const prior=select.value;select.replaceChildren(new Option('Insert product image',''));let n=0;mediaItems.forEach((item,index)=>{if(item.kind!=='image')return;const option=new Option(`Photo ${++n}${item.file?.name?` ? ${item.file.name}`:''}`,String(index));select.append(option);});if([...select.options].some(o=>o.value===prior))select.value=prior;}
+function addBlogImage(){const index=$('blog-image-source').value,item=mediaItems[Number(index)];if(!item){tell('Add or select a product photo first.',true);return;}const wrap=document.createElement('p');wrap.style.textAlign='center';const img=document.createElement('img');img.dataset.mediaIndex=index;img.src=item.file?URL.createObjectURL(item.file):item.url;img.alt=item.alt||'';img.style.maxWidth='100%';wrap.append(img);const editor=$('blog-editor');editor.focus();const selection=getSelection();if(selection?.rangeCount){const range=selection.getRangeAt(0);range.collapse(false);range.insertNode(wrap);range.setStartAfter(wrap);range.collapse(true);selection.removeAllRanges();selection.addRange(range);}else editor.append(wrap);dirty=true;}
+function applyBlogCommand(command,value=null){$('blog-editor').focus();document.execCommand(command,false,value);dirty=true;}
+function setBlogSize(delta){const editor=$('blog-editor');editor.focus();const selection=getSelection();if(!selection?.rangeCount||selection.isCollapsed){tell('Select some blog text first to change its size.');return;}const range=selection.getRangeAt(0);const span=document.createElement('span');const steps=['small','normal','large','xlarge'];const node=range.startContainer.parentElement;const current=steps.indexOf(node?.dataset.size||'normal');span.dataset.size=steps[Math.max(0,Math.min(3,current+delta))];try{range.surroundContents(span);}catch{const text=range.extractContents();span.append(text);range.insertNode(span);}dirty=true;}
+function addBlogBlock(){const editor=$('blog-editor');editor.focus();document.execCommand('formatBlock',false,'p');dirty=true;}
 let resultReturnFocus=null;
 function showPublishResult(product){if(!product)return;const url=`${connection.siteUrl}/products/${product.slug}/`;const project=new URL(connection.supabaseUrl).hostname.split('.')[0];$('result-product-link').href=url;$('result-supabase-link').href=`https://supabase.com/dashboard/project/${project}/editor?schema=public&table=products&row=${encodeURIComponent(product.id)}`;$('result-pin-link').hidden=true;$('result-pin-link').removeAttribute('href');$('result-supabase-status').textContent='Yes — saved';$('result-website-status').textContent='Checking live page…';$('result-pinterest-status').textContent=product.publish_to_pinterest?'Queued — checking…':'No — not selected';$('result-title').textContent='Product saved';$('result-copy').textContent='Supabase saved it. Website and Pinterest status will update here.';resultReturnFocus=$('publish');$('publish-result').hidden=false;$('result-done').focus();void checkPublishStatuses(product);}
 function closePublishResult(){$('publish-result').hidden=true;resultReturnFocus?.focus?.();}
@@ -47,12 +75,22 @@ async function checkPublishStatuses(product){
 function safeUrl(value) {const url=new URL(value);if(url.protocol!=='https:' || url.username || url.password || /\s/.test(value))throw new Error('Use a full HTTPS URL.');return url;}
 function detectStore(value){try{const host=new URL(value).hostname.toLowerCase().replace(/^www\./,'');if(host==='amzn.to'||host.startsWith('amazon.')||host.includes('.amazon.'))return 'Amazon';if(host==='walmart.com'||host.endsWith('.walmart.com'))return 'Walmart';if(host==='aliexpress.com'||host.endsWith('.aliexpress.com'))return 'AliExpress';if(host==='alibaba.com'||host.endsWith('.alibaba.com'))return 'Alibaba';if(['daraz.pk','daraz.com.bd','daraz.lk','daraz.com.np','daraz.com.mm'].some(domain=>host===domain||host.endsWith('.'+domain)))return 'Daraz';if(host==='temu.com'||host.endsWith('.temu.com'))return 'Temu';if(host==='ebay.com'||host.endsWith('.ebay.com'))return 'eBay';if(host==='etsy.com'||host.endsWith('.etsy.com'))return 'Etsy';if(host==='target.com'||host.endsWith('.target.com'))return 'Target';if(host==='bestbuy.com'||host.endsWith('.bestbuy.com'))return 'Best Buy';if(host==='shein.com'||host.endsWith('.shein.com'))return 'Shein';}catch{}return 'Other';}
 async function generateDetails(){
-  const title=field('title').value.trim();const poster=mediaItems.find(item=>item.kind==='image');if(!title)throw new Error('Add a product title first.');if(!poster)throw new Error('Add a photo first.');if(!session)await connect();
-  let blob;if(poster.file)blob=poster.file;else{const imageUrl=new URL(poster.url);if(imageUrl.origin!==connection.supabaseUrl||!imageUrl.pathname.includes('/product-images/'))throw new Error('Re-add the product photo to generate suggestions.');const response=await fetch(imageUrl,{signal:AbortSignal.timeout(20000)});if(!response.ok)throw new Error('Could not load the saved photo. Re-add it and try again.');blob=await response.blob();}
-  if(blob.size>5*1024*1024)throw new Error('The photo must be under 5 MB for AI suggestions.');const mimeType=['image/jpeg','image/png','image/webp'].includes(blob.type)?blob.type:'image/jpeg';const bytes=new Uint8Array(await blob.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,i+0x8000));const imageBase64=btoa(binary);
-  const button=$('generate-details');button.disabled=true;button.textContent='Generating suggestions…';
-  try{const response=await fetch(`${connection.supabaseUrl}/functions/v1/studio-generate`,{method:'POST',headers:{apikey:connection.publishableKey,Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json'},body:JSON.stringify({title,mimeType,imageBase64}),signal:AbortSignal.timeout(90000)});const result=await response.json().catch(()=>null);if(!response.ok)throw new Error(result?.error||`Suggestion failed (${response.status}).`);field('description').value=result.description;field('category').value=result.category;tagValues=[];for(const tag of result.tags||[])addTag(tag);dirty=true;$('editor-title').textContent=title;document.querySelector('.optional-fields').open=true;tell('Description, category and tags suggested. Review and edit them before publishing.');field('description').focus();}finally{button.disabled=false;button.textContent='Suggest description, category & tags from title + photo';}
+  const title=field('title').value.trim(),poster=mediaItems.find(item=>item.kind==='image');if(title.length<3||!poster||autoFillBusy)return;autoFillBusy=true;
+  const status=$('autofill-status');status.textContent='Generating description, category and tags from the title and photo...';
+  try{
+    if(!session)await connect();let blob;
+    if(poster.file)blob=poster.file;else{const imageUrl=new URL(poster.url);if(imageUrl.origin!==connection.supabaseUrl||!imageUrl.pathname.includes('/product-images/'))throw new Error('Re-add the product photo to generate suggestions.');const response=await fetch(imageUrl,{signal:AbortSignal.timeout(20000)});if(!response.ok)throw new Error('Could not load the saved photo. Re-add it and try again.');blob=await response.blob();}
+    if(blob.size>5*1024*1024)throw new Error('The photo must be under 5 MB for AI suggestions.');const mimeType=['image/jpeg','image/png','image/webp'].includes(blob.type)?blob.type:'image/jpeg';const bytes=new Uint8Array(await blob.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,i+0x8000));const imageBase64=btoa(binary);
+    const response=await fetch(`${connection.supabaseUrl}/functions/v1/studio-generate`,{method:'POST',headers:{apikey:connection.publishableKey,Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json'},body:JSON.stringify({title,mimeType,imageBase64}),signal:AbortSignal.timeout(90000)});const result=await response.json().catch(()=>null);if(!response.ok)throw new Error(result?.error||`Suggestion failed (${response.status}).`);
+    if(field('title').value.trim()!==title||mediaItems.find(item=>item.kind==='image')!==poster)return;
+    const desc=field('description'),category=field('category');if(!desc.value.trim()||desc.value===generatedDetails.description){desc.value=result.description;generatedDetails.description=result.description;}
+    if(!category.value||category.value===generatedDetails.category){category.value=result.category;generatedDetails.category=result.category;}
+    const current=tagValues.slice().sort().join('|'),previous=generatedDetails.tags.slice().sort().join('|');if(!tagValues.length||current===previous){tagValues=[];for(const tag of result.tags||[]){if(tagValues.length>=12)break;try{addTag(tag);}catch{}}generatedDetails.tags=[...tagValues];}
+    $('editor-title').textContent=title;status.textContent='Suggestions filled from your title and photo. Edit any field as needed.';dirty=true;
+  }catch(error){status.textContent=`Automatic suggestions unavailable: ${error.message}`;}
+  finally{autoFillBusy=false;if(field('title').value.trim()!==title)scheduleAutoFill();}
 }
+function scheduleAutoFill(){clearTimeout(autoFillTimer);if(field('title').value.trim().length<3||!mediaItems.some(item=>item.kind==='image'))return;autoFillTimer=setTimeout(()=>void generateDetails(),900);}
 function readConnection(settings) {
   const url=safeUrl(settings.supabaseUrl || '');
   if(!/^[a-z0-9-]+\.supabase\.co$/.test(url.hostname) || url.port || url.pathname !== '/')throw new Error('Enter your Supabase project URL: https://your-project.supabase.co');
@@ -122,12 +160,11 @@ function storeRow(store={}) {
 function addStore(){if($('stores').children.length>=8){tell('You can add up to eight stores.',true);return;}storeRow();dirty=true;$('stores').lastElementChild?.querySelector('[data-store="name"]')?.focus();}
 function fill(product, draft) {
   hasForm=true;selected=product;createId=draft?.id || crypto.randomUUID();localVersion=draft?.version || 0;draftProject=draft?.project || (product?connection.supabaseUrl:null);form.reset();$('stores').replaceChildren();
-  const source=draft?.values || product || {title:'',description:'',category:'Home & living',tags:[],stores:[],pin_media_type:'image',publish_to_pinterest:true,pinterest_board_id:lastBoard};
+  const source=draft?.values || product || {title:'',description:'',category:'',tags:[],stores:[],pin_media_type:'image',publish_to_pinterest:true,pinterest_board_id:lastBoard};
   mediaItems=restoreMedia(source,draft?.media);
   for(const name of ['title','description','category','poster_url','poster_alt','pin_media_type','pinterest_board_id','pin_image_url','video_path'])field(name).value=source[name] || '';
   field('blog_title').value=draft?.blogEditor?.title ?? source.blog_title ?? '';
-  const savedBlog=draft?.blogEditor?.blocks || (source.blog_content || []).map(block=>block.type==='image'?{type:'image',mediaIndex:String(mediaItems.findIndex(item=>item.kind==='image'&&item.url===block.url)),alt:block.alt}:{type:block.type,text:block.text});
-  renderBlogBlocks(savedBlog);
+  generatedDetails={description:'',category:'',tags:[]};renderBlogBlocks(draft?.blogEditor?.blocks || source.blog_content || []);
   tagValues=[...(source.tags || [])];field('tags').value='';renderTags();
   for(const name of ['featured','publish_to_pinterest'])field(name).checked=!!source[name];
   (source.stores.length?source.stores:[{}]).forEach(storeRow);
@@ -136,7 +173,7 @@ function fill(product, draft) {
   $('save-hint').textContent=product?.published?'Existing Pins are not reposted.':'Drafts stay on this PC. Publishing needs internet.';
   $('saved-links').hidden=!product;
   if(product){const url=`${draft?.siteUrl || connection.siteUrl}/products/${product.slug}/`;$('product-url').value=url;$('view-product').href=url;}
-  syncMedia();dirty=false;renderList();renderJob();renderMedia();renderLocalList();
+  syncMedia();dirty=false;renderList();renderJob();renderMedia();refreshBlogImageOptions();renderLocalList();
 }
 function renderJob() {
   const job=status?.jobs?.find(j=>j.product_id===selected?.id);
@@ -166,7 +203,7 @@ field('tags').addEventListener('keydown',event=>{if(event.key==='Enter'||event.k
 field('tags').addEventListener('blur',()=>{if(field('tags').value.trim()){try{addTag(field('tags').value);field('tags').value='';}catch(error){tell(error.message,true);}}});
 form.addEventListener('input',()=>{dirty=true;});
 form.addEventListener('change',()=>{dirty=true;});
-$('add-blog-heading').addEventListener('click',()=>addBlogBlock('heading'));$('add-blog-paragraph').addEventListener('click',()=>addBlogBlock('paragraph'));$('add-blog-underline').addEventListener('click',()=>addBlogBlock('underline'));$('add-blog-image').addEventListener('click',()=>addBlogBlock('image'));
+document.querySelectorAll('[data-blog-command]').forEach(button=>button.addEventListener('click',()=>applyBlogCommand(button.dataset.blogCommand)));$('blog-font').addEventListener('change',event=>applyBlogCommand('fontName',event.target.value));$('blog-block-style').addEventListener('change',event=>applyBlogCommand('formatBlock',event.target.value));$('blog-size-down').addEventListener('click',()=>setBlogSize(-1));$('blog-size-up').addEventListener('click',()=>setBlogSize(1));$('blog-insert-image').addEventListener('click',addBlogImage);$('blog-editor').addEventListener('input',()=>{dirty=true;});
 field('pinterest_board_id').addEventListener('change',()=>{const board=field('pinterest_board_id').value.trim();if(!board || /^\d+$/.test(board)){lastBoard=board;try{localStorage.setItem('curated-studio-board',board);}catch{}}});
 async function stageMedia(files) {
   if(!files.length)return;
@@ -181,17 +218,17 @@ async function stageMedia(files) {
     try{next.unshift(await posterFromVideo(next.find(i=>i.kind==='video').file));}
     catch(error){mediaItems=next;dirty=true;syncMedia();renderMedia();throw error;}
   }
-  mediaItems=next;dirty=true;syncMedia();renderMedia();tell('Media ready. The first photo is used as the poster for your website and Pinterest.');
+  mediaItems=next;dirty=true;syncMedia();renderMedia();refreshBlogImageOptions();tell('Media ready. The first photo is used as the poster for your website and Pinterest.');
 }
-$('media-files').addEventListener('change',()=>{const files=[...$('media-files').files];$('media-files').value='';void locked(async()=>{await stageMedia(files);$('add-media-more').focus();});});
-$('add-media-more').addEventListener('click',()=>$('media-files').click());
+$('media-files').addEventListener('change',()=>{const files=[...$('media-files').files];$('media-files').value='';void locked(async()=>{await stageMedia(files);refreshBlogImageOptions();scheduleAutoFill();field('title').focus();});});
+
 function payload(published,validate=true) {
   syncMedia();
   const values={};for(const name of ['title','description','category','poster_url','poster_alt','pin_media_type'])values[name]=field(name).value.trim();
   for(const name of ['pinterest_board_id','pin_image_url','video_path'])values[name]=field(name).value.trim() || null;
   values.poster_alt=values.poster_alt || values.title;
   values.images=mediaItems.filter(item=>item.kind==='image' && item.url).map(item=>({url:item.url,pin_url:item.pinUrl || item.url,alt:item.alt || values.poster_alt}));
-  values.blog_title=field('blog_title').value.trim();values.blog_content=collectBlogBlocks().map(block=>block.type==='image'?{type:'image',url:mediaItems[Number(block.mediaIndex)]?.url||'',alt:block.alt||mediaItems[Number(block.mediaIndex)]?.alt||values.title}:{type:block.type,text:block.text});
+  values.blog_title=field('blog_title').value.trim();values.blog_content=collectBlogBlocks();
   if(field('tags').value.trim())addTag(field('tags').value);field('tags').value='';values.tags=[...tagValues];values.featured=field('featured').checked;values.publish_to_pinterest=field('publish_to_pinterest').checked;values.published=published;
   values.stores=[...$('stores').children].map(row=>Object.fromEntries([...row.querySelectorAll('[data-store]')].map(input=>[input.dataset.store,input.value.trim()]))).filter(s=>s.url || s.note);
   if(!validate)return values;
@@ -225,7 +262,7 @@ async function save(published) {
       syncMedia();renderMedia();
     }
   }
-  const values=payload(published);if(values.blog_content.some(block=>block.type==='image'&&!block.url))throw new Error('Choose an uploaded product photo for each blog image.');const editing=selected;
+  const values=payload(published);const editing=selected;
   const route=editing?`/rest/v1/products?id=eq.${editing.id}&revision=eq.${editing.revision}`:'/rest/v1/products';
   let saved;
   try {saved=await request(route,{method:editing?'PATCH':'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(editing?values:{...values,id:createId})});}
@@ -244,7 +281,7 @@ async function save(published) {
   try{await refresh();}catch{tell('Product saved, but status could not refresh. Use Refresh status to check it.');}
 }
 form.addEventListener('submit',event=>{event.preventDefault();void locked(()=>save(true));});
-$('generate-details').addEventListener('click',()=>void locked(generateDetails));
+field('title').addEventListener('input',scheduleAutoFill);
 $('save-draft').addEventListener('click',()=>void locked(()=>save(false)));
 $('copy-url').addEventListener('click',()=>void locked(async()=>{try{await navigator.clipboard.writeText($('product-url').value);tell('Product URL copied.');}catch{$('product-url').focus();$('product-url').select();tell('Select and copy the product URL above.');}}));
 $('close-result').addEventListener('click',closePublishResult);$('result-done').addEventListener('click',closePublishResult);$('publish-result').addEventListener('click',event=>{if(event.target.id==='publish-result')closePublishResult();});

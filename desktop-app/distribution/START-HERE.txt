@@ -1,0 +1,11 @@
+﻿CURATED STUDIO 1.5.0 - QUICK SETUP
+
+1. Install Curated-Studio-Setup-1.5.0.exe from this folder.
+2. Open Curated Studio from the desktop shortcut.
+3. Add photos/video first, then enter a product title. AI fills the description, category and tags; edit them whenever needed.
+4. Add affiliate store links and publish. Optional settings and the rich product blog are under Optional details.
+5. Send the same installer to your Windows friend. No IDE, Node.js, terminal, login or setup variables are needed.
+
+This installer connects to the configured Curated Supabase project. Anyone who has the installer has editor access; only share it with trusted people.
+The rich blog database update is already applied to the configured Supabase project. New product content updates the website from Supabase.
+AI autofill depends on the Supabase studio-generate function and its Gemini secret being configured. Pinterest posting additionally depends on the connected Pinterest account and publisher setup.
