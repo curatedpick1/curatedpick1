@@ -15,6 +15,15 @@ test('live products require actionable store links, accessible image metadata, a
   assert.equal(validateProduct(fixture).id, fixture.id);
   for (const overrides of [{ stores: [] }, { description: 'x'.repeat(441) }, { poster_alt: '' }, { revision: 0 }, { slug: '../../admin' }, { tags: [null] }]) assert.throws(() => validateProduct({ ...fixture, ...overrides }));
 });
+test('optional product blogs accept safe structured text and product photos only', () => {
+  const blog = { blog_title: 'A guide to a better reading corner', blog_content: [{ type: 'heading', text: 'Start with your space' }, { type: 'paragraph', text: 'Measure your desk before choosing a lamp.' }, { type: 'underline', text: 'Check the dimensions first.' }, { type: 'image', url: 'https://images.example.com/detail.jpg', alt: 'Lamp on a reading desk' }] };
+  assert.equal(validateProduct({ ...fixture, ...blog }).blog_content?.length, 4);
+  for (const invalid of [
+    { blog_content: [{ type: 'image', url: 'javascript:alert(1)', alt: 'unsafe' }] },
+    { blog_content: [{ type: 'html', text: '<script>alert(1)</script>' }] },
+    { blog_title: '', blog_content: [{ type: 'paragraph', text: 'A useful article.' }] },
+  ]) assert.throws(() => validateProduct({ ...fixture, ...invalid }));
+});
 test('related picks rank matching categories and tags; exclude the current product; stable ties', () => {
   const other = { ...fixture, id: '2', slug: 'other', category: 'Tech', tags: [], created_at: '2026-09-09' };
   const matched = { ...fixture, id: '3', slug: 'matched' };

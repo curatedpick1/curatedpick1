@@ -1,5 +1,10 @@
 export interface StoreLink { name: string; url: string; note?: string }
 export interface ProductImage { url: string; pin_url?: string; alt?: string }
+export type ProductBlogBlock =
+  | { type: 'heading'; text: string }
+  | { type: 'paragraph'; text: string }
+  | { type: 'underline'; text: string }
+  | { type: 'image'; url: string; alt: string };
 export interface Product {
   id: string;
   slug: string;
@@ -10,6 +15,8 @@ export interface Product {
   poster_url: string;
   poster_alt: string;
   images?: ProductImage[];
+  blog_title?: string;
+  blog_content?: ProductBlogBlock[];
   stores: StoreLink[];
   featured: boolean;
   revision: number;
@@ -36,6 +43,20 @@ export function validateProduct(value: unknown, demo = false): Product {
   if(p.images !== undefined){
     if(!Array.isArray(p.images) || p.images.length>10)throw new Error('Use up to 10 product photos');
     for(const image of p.images){httpsUrl(image.url);if(image.pin_url)httpsUrl(image.pin_url);if(image.alt!==undefined && (typeof image.alt!=='string' || image.alt.length>500))throw new Error('Invalid image description');}
+  }
+  if (p.blog_title !== undefined && (typeof p.blog_title !== 'string' || p.blog_title.length > 160)) throw new Error(`Invalid blog title: ${p.slug}`);
+  if (p.blog_content !== undefined) {
+    if (!Array.isArray(p.blog_content) || p.blog_content.length > 40) throw new Error(`Invalid blog content: ${p.slug}`);
+    for (const block of p.blog_content) {
+      if (!block || typeof block !== 'object') throw new Error(`Invalid blog block: ${p.slug}`);
+      if (block.type === 'image') {
+        httpsUrl(block.url);
+        if (typeof block.alt !== 'string' || block.alt.length > 500) throw new Error(`Invalid blog image: ${p.slug}`);
+      } else if (['heading', 'paragraph', 'underline'].includes(block.type)) {
+        if (typeof block.text !== 'string' || !block.text.trim() || block.text.length > (block.type === 'heading' ? 160 : 2400)) throw new Error(`Invalid blog text: ${p.slug}`);
+      } else throw new Error(`Invalid blog block type: ${p.slug}`);
+    }
+    if (p.blog_content.length && !p.blog_title?.trim()) throw new Error(`Add a blog title: ${p.slug}`);
   }
   if (!Array.isArray(p.stores) || p.stores.length > 8 || (!demo && !p.stores.length)) throw new Error(`Add 1–8 store links: ${p.slug}`);
   for (const store of p.stores) {

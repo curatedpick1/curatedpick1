@@ -9,6 +9,17 @@ let localDrafts=[], localVersion=0, draftProject=null, mediaItems=[], previewUrl
 function tell(text, error = false) {const node = $('notice');node.textContent=text;node.classList.toggle('error',error);}
 function renderTags(){const list=$('tag-list');if(!list)return;list.replaceChildren();tagValues.forEach((tag,index)=>{const chip=document.createElement('span');chip.className='tag-chip';chip.textContent=tag;const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.setAttribute('aria-label',`Remove tag ${tag}`);remove.addEventListener('click',()=>{tagValues.splice(index,1);renderTags();dirty=true;});chip.append(remove);list.append(chip);});}
 function addTag(value){const tag=value.trim().replace(/^,+|,+$/g,'');if(!tag)return;if(tagValues.length>=12)throw new Error('Use up to 12 tags.');if(tag.length>40)throw new Error('Tags can be at most 40 characters.');if(!tagValues.some(item=>item.toLowerCase()===tag.toLowerCase()))tagValues.push(tag);renderTags();}
+function collectBlogBlocks(includeEmpty=false){return [...$('blog-block-list').querySelectorAll('[data-blog-block]')].map(row=>{const type=row.dataset.type;if(type==='image')return{type,mediaIndex:row.querySelector('[data-blog-media]').value,alt:row.querySelector('[data-blog-alt]').value.trim()};return{type,text:row.querySelector('[data-blog-text]').value.trim()};}).filter(block=>includeEmpty||(block.type==='image'?block.mediaIndex!=='':Boolean(block.text)));}
+function renderBlogBlocks(blocks=blogBlocks){blogBlocks=blocks;$('blog-block-list').replaceChildren();if(!blocks.length){const note=document.createElement('p');note.className='blog-empty';note.textContent='No blog content. The product page will not show a blog section.';$('blog-block-list').append(note);return;}
+  const names={heading:'Heading',paragraph:'Paragraph',underline:'Underlined note',image:'Centered photo'};
+  blocks.forEach((block,index)=>{const row=document.createElement('section');row.className='blog-block';row.dataset.blogBlock='';row.dataset.type=block.type;const head=document.createElement('div');head.className='blog-block-head';const title=document.createElement('strong');title.textContent=names[block.type]||'Blog content';head.append(title);const actions=document.createElement('div');actions.className='blog-block-actions';for(const [label,delta] of [['Move up',-1],['Move down',1]]){const button=document.createElement('button');button.type='button';button.textContent=delta<0?'Move up':'Move down';button.setAttribute('aria-label',label);button.disabled=index+delta<0||index+delta>=blocks.length;button.addEventListener('click',()=>{const next=collectBlogBlocks(true);[next[index],next[index+delta]]=[next[index+delta],next[index]];dirty=true;renderBlogBlocks(next);});actions.append(button);}const remove=document.createElement('button');remove.type='button';remove.textContent='Remove';remove.addEventListener('click',()=>{const next=collectBlogBlocks(true);next.splice(index,1);dirty=true;renderBlogBlocks(next);});actions.append(remove);head.append(actions);row.append(head);
+    if(block.type==='image'){const label=document.createElement('label');label.textContent='Product photo';const select=document.createElement('select');select.dataset.blogMedia='';const prompt=document.createElement('option');prompt.value='';prompt.textContent='Choose a photo';select.append(prompt);let photoNumber=0;mediaItems.forEach((item,mediaIndex)=>{if(item.kind!=='image')return;photoNumber++;const option=document.createElement('option');option.value=String(mediaIndex);option.textContent=`Photo ${photoNumber}${item.file?.name?` ? ${item.file.name}`:''}`;select.append(option);});select.value=block.mediaIndex==null?'':String(block.mediaIndex);label.append(select);row.append(label);const altLabel=document.createElement('label');altLabel.textContent='Photo description';const alt=document.createElement('input');alt.type='text';alt.maxLength=500;alt.dataset.blogAlt='';alt.value=block.alt||'';alt.placeholder='Briefly describe the photo';altLabel.append(alt);row.append(altLabel);}
+    else{const label=document.createElement('label');label.textContent=block.type==='heading'?'Heading text':block.type==='underline'?'Underlined text':'Paragraph text';const input=document.createElement(block.type==='heading'?'input':'textarea');input.dataset.blogText='';input.maxLength=block.type==='heading'?160:2400;input.value=block.text||'';if(input instanceof HTMLTextAreaElement)input.rows=block.type==='underline'?2:4;input.placeholder=block.type==='heading'?'A clear section heading':block.type==='underline'?'A short detail worth emphasizing':'Write useful, original information for shoppers';label.append(input);row.append(label);}
+    $('blog-block-list').append(row);
+  });
+}
+function addBlogBlock(type){if(blogBlocks.length>=40){tell('Use up to 40 blog sections.',true);return;}if(type==='image'&&!mediaItems.some(item=>item.kind==='image')){tell('Add a product photo first, then choose it for the blog.',true);return;}blogBlocks=collectBlogBlocks(true);blogBlocks.push(type==='image'?{type,mediaIndex:'',alt:''}:{type,text:''});dirty=true;renderBlogBlocks(blogBlocks);$('blog-block-list').lastElementChild?.querySelector('input,textarea,select')?.focus();}
+
 let resultReturnFocus=null;
 function showPublishResult(product){if(!product)return;const url=`${connection.siteUrl}/products/${product.slug}/`;const project=new URL(connection.supabaseUrl).hostname.split('.')[0];$('result-product-link').href=url;$('result-supabase-link').href=`https://supabase.com/dashboard/project/${project}/editor?schema=public&table=products&row=${encodeURIComponent(product.id)}`;$('result-pin-link').hidden=true;$('result-pin-link').removeAttribute('href');$('result-supabase-status').textContent='Yes — saved';$('result-website-status').textContent='Checking live page…';$('result-pinterest-status').textContent=product.publish_to_pinterest?'Queued — checking…':'No — not selected';$('result-title').textContent='Product saved';$('result-copy').textContent='Supabase saved it. Website and Pinterest status will update here.';resultReturnFocus=$('publish');$('publish-result').hidden=false;$('result-done').focus();void checkPublishStatuses(product);}
 function closePublishResult(){$('publish-result').hidden=true;resultReturnFocus?.focus?.();}
@@ -114,6 +125,9 @@ function fill(product, draft) {
   const source=draft?.values || product || {title:'',description:'',category:'Home & living',tags:[],stores:[],pin_media_type:'image',publish_to_pinterest:true,pinterest_board_id:lastBoard};
   mediaItems=restoreMedia(source,draft?.media);
   for(const name of ['title','description','category','poster_url','poster_alt','pin_media_type','pinterest_board_id','pin_image_url','video_path'])field(name).value=source[name] || '';
+  field('blog_title').value=draft?.blogEditor?.title ?? source.blog_title ?? '';
+  const savedBlog=draft?.blogEditor?.blocks || (source.blog_content || []).map(block=>block.type==='image'?{type:'image',mediaIndex:String(mediaItems.findIndex(item=>item.kind==='image'&&item.url===block.url)),alt:block.alt}:{type:block.type,text:block.text});
+  renderBlogBlocks(savedBlog);
   tagValues=[...(source.tags || [])];field('tags').value='';renderTags();
   for(const name of ['featured','publish_to_pinterest'])field(name).checked=!!source[name];
   (source.stores.length?source.stores:[{}]).forEach(storeRow);
@@ -151,6 +165,8 @@ if($('add-store'))$('add-store').addEventListener('click',addStore);
 field('tags').addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===','){event.preventDefault();try{addTag(field('tags').value);field('tags').value='';dirty=true;}catch(error){tell(error.message,true);}}});
 field('tags').addEventListener('blur',()=>{if(field('tags').value.trim()){try{addTag(field('tags').value);field('tags').value='';}catch(error){tell(error.message,true);}}});
 form.addEventListener('input',()=>{dirty=true;});
+form.addEventListener('change',()=>{dirty=true;});
+$('add-blog-heading').addEventListener('click',()=>addBlogBlock('heading'));$('add-blog-paragraph').addEventListener('click',()=>addBlogBlock('paragraph'));$('add-blog-underline').addEventListener('click',()=>addBlogBlock('underline'));$('add-blog-image').addEventListener('click',()=>addBlogBlock('image'));
 field('pinterest_board_id').addEventListener('change',()=>{const board=field('pinterest_board_id').value.trim();if(!board || /^\d+$/.test(board)){lastBoard=board;try{localStorage.setItem('curated-studio-board',board);}catch{}}});
 async function stageMedia(files) {
   if(!files.length)return;
@@ -175,12 +191,14 @@ function payload(published,validate=true) {
   for(const name of ['pinterest_board_id','pin_image_url','video_path'])values[name]=field(name).value.trim() || null;
   values.poster_alt=values.poster_alt || values.title;
   values.images=mediaItems.filter(item=>item.kind==='image' && item.url).map(item=>({url:item.url,pin_url:item.pinUrl || item.url,alt:item.alt || values.poster_alt}));
+  values.blog_title=field('blog_title').value.trim();values.blog_content=collectBlogBlocks().map(block=>block.type==='image'?{type:'image',url:mediaItems[Number(block.mediaIndex)]?.url||'',alt:block.alt||mediaItems[Number(block.mediaIndex)]?.alt||values.title}:{type:block.type,text:block.text});
   if(field('tags').value.trim())addTag(field('tags').value);field('tags').value='';values.tags=[...tagValues];values.featured=field('featured').checked;values.publish_to_pinterest=field('publish_to_pinterest').checked;values.published=published;
   values.stores=[...$('stores').children].map(row=>Object.fromEntries([...row.querySelectorAll('[data-store]')].map(input=>[input.dataset.store,input.value.trim()]))).filter(s=>s.url || s.note);
   if(!validate)return values;
   if(!values.title)throw new Error('Give your product a title.');
   if(!values.tags.length)throw new Error('Add at least one tag. Press Enter after typing each tag.');
   if(!values.category)throw new Error('Choose a product category.');
+  if(values.blog_content.length&&!values.blog_title)throw new Error('Add a title for your blog, or remove its content.');
   if(values.tags.length>12 || values.tags.some(t=>t.length>40))throw new Error('Use up to 12 tags, with at most 40 characters each.');
   if(values.pinterest_board_id && !/^\d+$/.test(values.pinterest_board_id))throw new Error('Use a numeric board ID, or leave it blank to choose automatically.');
   for(const s of values.stores){s.name=s.name || 'Other';if(!s.url)throw new Error('Add an affiliate URL for every store.');safeUrl(s.url);}
@@ -193,8 +211,8 @@ async function save(published) {
   if(draftProject && draftProject!==connection.supabaseUrl)throw new Error('This draft belongs to a different Supabase project. Sign in to that project before saving it online.');
   if(!published && selected?.published && !confirm('Unpublish this product? Its public page will be removed immediately. Existing Pins will remain.'))return;
   // Check before uploading so an older backend cannot leave orphan media uploads.
-  try{await request('/rest/v1/products?select=id,images&limit=0');}
-  catch(error){if(error.code==='42703' || error.code==='PGRST204')throw new Error('Your draft is saved on this PC. This project needs its one-time gallery update before online publishing.');throw error;}
+  try{await request('/rest/v1/products?select=id,images,blog_content&limit=0');}
+  catch(error){if(error.code==='42703' || error.code==='PGRST204')throw new Error('Your draft is saved on this PC. This project needs its one-time product media and blog update before online publishing.');throw error;}
   payload(published);draftProject=connection.supabaseUrl;
   for(const media of mediaItems) {
     for(const [fileKey,urlKey] of media.kind==='video'?[['file','path']]:[['file','url'],['pinFile','pinUrl']]) {
@@ -207,7 +225,7 @@ async function save(published) {
       syncMedia();renderMedia();
     }
   }
-  const values=payload(published);const editing=selected;
+  const values=payload(published);if(values.blog_content.some(block=>block.type==='image'&&!block.url))throw new Error('Choose an uploaded product photo for each blog image.');const editing=selected;
   const route=editing?`/rest/v1/products?id=eq.${editing.id}&revision=eq.${editing.revision}`:'/rest/v1/products';
   let saved;
   try {saved=await request(route,{method:editing?'PATCH':'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(editing?values:{...values,id:createId})});}
@@ -266,7 +284,7 @@ function renderLocalList() {
 }
 async function refreshLocal(){localDrafts=await listDrafts();renderLocalList();}
 async function saveLocal(announce=true) {
-  const draft={id:createId,project:draftProject,siteUrl:connection?.siteUrl || '',product:selected || null,values:payload(!!selected?.published,false),media:mediaItems};
+  const draft={id:createId,project:draftProject,siteUrl:connection?.siteUrl || '',product:selected || null,values:payload(!!selected?.published,false),media:mediaItems,blogEditor:{title:field('blog_title').value,blocks:collectBlogBlocks(true)}};
   let saved;
   try{saved=await putDraft(draft,localVersion);}catch(error){throw new Error(`Could not save on this PC. ${error.name==='QuotaExceededError'?'Browser storage is full. Free space or remove old drafts.':error.message} Your current form is still open.`);}
   localVersion=saved.version;dirty=false;await refreshLocal();

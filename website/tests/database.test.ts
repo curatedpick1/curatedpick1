@@ -8,6 +8,8 @@ test('database enforces private writes, draft isolation, permanent URLs, queue u
   try {
     await db.exec('create role anon; create role authenticated; create role service_role bypassrls; grant usage on schema public to anon, authenticated, service_role;');
     await db.exec(await readFile(new URL('../supabase/migrations/202609080001_catalog.sql', import.meta.url), 'utf8'));
+    await db.exec(await readFile(new URL('../supabase/migrations/202609230004_product_media.sql', import.meta.url), 'utf8'));
+    await db.exec(await readFile(new URL('../supabase/migrations/202609260001_product_blog.sql', import.meta.url), 'utf8'));
     const inserted = await db.query<{ id: string; slug: string }>(`insert into products(title) values ('Warm desk lamp') returning id,slug`);
     const { id, slug } = inserted.rows[0];
     assert.ok(slug.startsWith('warm-desk-lamp-'));
@@ -19,6 +21,7 @@ test('database enforces private writes, draft isolation, permanent URLs, queue u
     await db.exec('reset role');
     await assert.rejects(() => db.query('update products set published=true where id=$1', [id]), /check constraint/);
     await db.query(`update products set description='Warm light for your desk.',poster_url='https://cdn.example.com/lamp.jpg',poster_alt='Reading lamp', stores=$2::jsonb,pinterest_board_id='123',publish_to_pinterest=true,published=true where id=$1`, [id, JSON.stringify([{ name: 'Amazon', url: 'https://amazon.com/dp/B000000001?tag=test-20' }])]);
+    await db.query(`update products set blog_title='How to choose a reading lamp',blog_content=$2::jsonb where id=$1`, [id, JSON.stringify([{ type: 'heading', text: 'Think about your desk' }, { type: 'paragraph', text: 'Look for a lamp that fits the space you have.' }, { type: 'underline', text: 'Measure before ordering.' }, { type: 'image', url: 'https://cdn.example.com/lamp-detail.jpg', alt: 'Lamp beside a notebook' }])]);
     assert.equal((await db.query('select * from pinterest_jobs')).rows.length, 1);
     await db.exec('set role anon');
     const live = (await db.query<{ get_catalog: { revision: number; products: Record<string, unknown>[] } }>('select get_catalog()')).rows[0].get_catalog;
@@ -26,12 +29,15 @@ test('database enforces private writes, draft isolation, permanent URLs, queue u
     assert.equal(live.products[0].slug, slug);
     assert.ok(!('video_path' in live.products[0]));
     assert.ok(!('pinterest_board_id' in live.products[0]));
+    assert.equal(live.products[0].blog_title, 'How to choose a reading lamp');
+    assert.equal(live.products[0].blog_content.length, 4);
     await assert.rejects(() => db.query("insert into products(title) values ('injected')"), /permission denied/);
     await db.exec('reset role; set role authenticated');
     await assert.rejects(() => db.query("update products set title='injected'"), /permission denied/);
     await db.exec('reset role');
     await assert.rejects(() => db.query("update products set slug='changed' where id=$1", [id]), /permanent/);
     await assert.rejects(() => db.query(`update products set stores='[{"name":"Unsafe","url":"javascript:alert(1)"}]' where id=$1`, [id]), /check constraint/);
+    await assert.rejects(() => db.query(`update products set blog_content='[{"type":"image","url":"javascript:alert(1)","alt":"x"}]' where id=$1`, [id]), /check constraint/);
     await db.query("update pinterest_jobs set state='published',pin_id='999' where product_id=$1", [id]);
     await db.query("update products set poster_url='https://cdn.example.com/new.jpg' where id=$1", [id]);
     assert.deepEqual((await db.query('select state,pin_id from pinterest_jobs')).rows, [{ state: 'published', pin_id: '999' }]);

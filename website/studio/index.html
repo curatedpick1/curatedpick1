@@ -32,6 +32,16 @@
           <input type="hidden" name="poster_url"><input type="hidden" name="pin_image_url"><input type="hidden" name="video_path"><input type="hidden" name="pin_media_type">
         </section>
         <section class="form-section"><div class="section-title"><h3>Affiliate links <span class="required-mark">Required to publish</span></h3><span>These become the store buttons on your website.</span></div><div id="stores"></div></section>
+        <details class="blog-editor">
+          <summary>Optional product blog <span class="optional-mark">Only appears when you add content</span></summary>
+          <p class="blog-editor-help">Add original, useful details to support search discovery. Rankings are never guaranteed. Leave this empty to hide the blog from the product page.</p>
+          <label>Blog title <span class="optional-mark">Optional</span><input name="blog_title" maxlength="160" placeholder="A short, helpful article title"></label>
+          <div class="blog-add-buttons" aria-label="Add blog content">
+            <button type="button" id="add-blog-heading">+ Heading</button><button type="button" id="add-blog-paragraph">+ Paragraph</button><button type="button" id="add-blog-underline">+ Underlined note</button><button type="button" id="add-blog-image">+ Centered photo</button>
+          </div>
+          <div id="blog-block-list" class="blog-block-list" aria-live="polite"></div>
+          <small>Headings use a light Impact-style display font. Blog photos are centered and chosen from this product?s photos.</small>
+        </details>
         <details class="optional-fields"><summary>Optional details</summary>
           <label>Pinterest board ID — optional<input name="pinterest_board_id" inputmode="numeric" pattern="[0-9]*" placeholder="Use the account’s default board"><small>Leave blank to choose automatically from your connected account.</small></label>
           <label>Image description — optional<input name="poster_alt" maxlength="500" placeholder="Uses the product title if left blank"></label>

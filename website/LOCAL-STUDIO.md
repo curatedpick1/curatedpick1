@@ -8,7 +8,7 @@ The form runs at **http://127.0.0.1:4333**, only on your own computer, on Window
 
 ## 1. Enable editor access once
 
-In Supabase SQL Editor, run [202609130003_local_editors.sql](supabase/migrations/202609130003_local_editors.sql). This is an additional migration after the first two you already ran. Do not rerun migrations 001 or 002 afterward.
+In Supabase SQL Editor, run [202609130003_local_editors.sql](supabase/migrations/202609130003_local_editors.sql). This is an additional migration after the first two you already ran. Do not rerun migrations 001 or 002 afterward. After the product media migration [202609230004_product_media.sql](supabase/migrations/202609230004_product_media.sql), run [202609260001_product_blog.sql](supabase/migrations/202609260001_product_blog.sql) to enable the optional product blog fields.
 
 This creates `catalog_editors` and grants approved users product editing and media uploads. Public visitors and ordinary authenticated accounts still cannot edit products. Editors cannot read Pinterest credentials, manage the editor allowlist, change permanent slugs, delete products, or invoke the private publisher. To hide a product, they can unpublish it. Access is enforced by Supabase, not by the fact that the UI is local.
 
@@ -58,7 +58,7 @@ They install Node.js 24 and run the Linux launcher described above. The project 
 5. **Save on this PC** saves an offline draft with its selected files. **Save to Supabase draft** uploads files and creates a shared draft, keeping it off the public website. **Publish product** uploads files, saves the product as public in Supabase, and queues its Pin if selected. If you are signed out, your draft is saved locally first and the sign-in form opens. After signing in, click the desired save/publish button again. Reconnecting to the internet does not publish anything automatically.
 6. Copy the generated permanent URL. It is reachable as soon as the product is saved.
 
-The main form shows title, description, Pin format/board, poster, image description, video when selected, and affiliate links. Category/tags, media URLs and homepage featuring are under **Optional details & existing media**. Shared drafts, deletion and detailed publishing status are under **More actions & publishing status**. The last board ID entered is remembered for new products.
+The main form shows title, description, required category/tags, Pin format/board, poster, image description, video when selected, and affiliate links. The optional product blog has heading, paragraph, underlined-note, and centered-photo controls; an empty blog stays hidden on the product page. Shared drafts, deletion and detailed publishing status are under **More actions & publishing status**. The last board ID entered is remembered for new products.
 
 Status shows whether the Worker is using the live Supabase catalog, along with actual Pinterest job states. “Credentials saved” does not prove the scheduled publisher is running or that Pinterest has granted production access. Click **Refresh** to see current progress. No automatic retry is offered for uncertain Pin submissions; use the recovery guidance in [OPERATIONS.md](OPERATIONS.md).
 

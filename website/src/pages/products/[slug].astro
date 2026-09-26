@@ -42,6 +42,15 @@ const otherStores=product?.stores.filter(store=>store!==primaryStore) || [];
     </div>
   </section>
   {related.length > 0 && <section class="related-section wrap" aria-labelledby="related-title"><div class="section-heading"><div><p class="eyebrow">KEEP EXPLORING</p><h2 id="related-title">You might like these too</h2></div><a class="text-link" href="/#discover">View all finds <Icon name="right" size={16} /></a></div><div class="product-grid related-grid">{related.map((pick, index) => <ProductCard product={pick} index={index + 2} />)}</div></section>}
+  {product.blog_content?.length && <article class="product-blog wrap" aria-labelledby="product-blog-title">
+    <header><p class="eyebrow">THE STORY BEHIND THE FIND</p><h2 id="product-blog-title">{product.blog_title}</h2></header>
+    <div class="product-blog-body">{product.blog_content.map(block => {
+      if (block.type === 'heading') return <h3>{block.text}</h3>;
+      if (block.type === 'paragraph') return <p>{block.text}</p>;
+      if (block.type === 'underline') return <p class="blog-underline"><u>{block.text}</u></p>;
+      return <figure><img src={block.url} alt={block.alt} loading="lazy" /></figure>;
+    })}</div>
+  </article>}
 </Layout>
 ) : (
   <Layout title="Find not found — The Curated Pick" noindex>
