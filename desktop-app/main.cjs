@@ -32,7 +32,7 @@ else {
     const site = new URL(config.siteUrl).origin;
     const getSession = createStudioSession(config, path.join(__dirname, 'private', 'editor.json'));
     const headers = {
-      'Content-Security-Policy': `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https: blob:; media-src blob:; connect-src 'self' ${new URL(config.supabaseUrl).origin} ${site}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
+      'Content-Security-Policy': `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https: blob:; media-src blob:; connect-src 'self' ${new URL(config.supabaseUrl).origin} ${site} https://generativelanguage.googleapis.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
       'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store',
     };
     protocol.handle('curated', async request => {
@@ -42,6 +42,11 @@ else {
         if (request.method !== 'POST') return new Response(null, {status:405, headers});
         try {return Response.json(await getSession(), {headers});}
         catch(error) {return Response.json({error:error.message}, {status:503, headers});}
+      }
+      if (url.host === 'studio' && url.pathname === '/gemini-config.json') {
+        if (request.method !== 'GET') return new Response(null, {status:405, headers});
+        try {const key=JSON.parse(await readFile(path.join(__dirname,'private','gemini-api-key.json'),'utf8'));return Response.json(key,{headers});}
+        catch {return Response.json({apiKey:''},{status:503,headers});}
       }
       if (url.host !== 'studio' || !route) return new Response('Not found', {status: 404, headers});
       if (!['GET', 'HEAD'].includes(request.method)) return new Response(null, {status: 405, headers});

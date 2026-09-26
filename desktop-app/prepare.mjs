@@ -25,10 +25,13 @@ icoHeader.writeUInt32LE(22, 18);
 await writeFile(new URL('icon.ico', assets), Buffer.concat([icoHeader, icon]));
 await copyFile(new URL('node_modules/@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2', root), new URL('font.woff2', assets));
 const config = parseEnv(await readFile(new URL('.env.example', root), 'utf8'));
+let geminiApiKey = process.env.CURATED_GEMINI_API_KEY?.trim() || '';
+if (!geminiApiKey) { try { geminiApiKey = (await readFile(new URL('./private/gemini-api-key.txt', import.meta.url), 'utf8')).trim(); } catch (error) { if (error.code !== 'ENOENT') throw error; } }
 const supabase = new URL(config.SUPABASE_URL);
 const site = new URL(config.SITE_URL);
 if (credential.supabaseUrl !== supabase.origin || !credential.email || !credential.password) throw new Error('Configure this app copy before building its installer.');
 await writeFile(new URL('editor.json', privateDirectory), JSON.stringify(credential));
+await writeFile(new URL('gemini-api-key.json', privateDirectory), JSON.stringify({apiKey:geminiApiKey}));
 await copyFile(new URL('scripts/studio-auth.cjs', root), new URL('./studio-auth.cjs', import.meta.url));
 if (supabase.protocol !== 'https:' || !supabase.hostname.endsWith('.supabase.co') || site.protocol !== 'https:' || !config.SUPABASE_PUBLISHABLE_KEY?.startsWith('sb_publishable_')) {
   throw new Error('Set valid public project settings in .env.example before packaging.');
@@ -37,5 +40,6 @@ await writeFile(new URL('config.json', assets), JSON.stringify({
   supabaseUrl: supabase.origin,
   publishableKey: config.SUPABASE_PUBLISHABLE_KEY,
   siteUrl: site.origin,
+  suggestionMode: 'direct',
 }));
 console.log('Studio files and public project settings prepared.');

@@ -81,7 +81,20 @@ async function generateDetails(){
     if(!session)await connect();let blob;
     if(poster.file)blob=poster.file;else{const imageUrl=new URL(poster.url);if(imageUrl.origin!==connection.supabaseUrl||!imageUrl.pathname.includes('/product-images/'))throw new Error('Re-add the product photo to generate suggestions.');const response=await fetch(imageUrl,{signal:AbortSignal.timeout(20000)});if(!response.ok)throw new Error('Could not load the saved photo. Re-add it and try again.');blob=await response.blob();}
     if(blob.size>5*1024*1024)throw new Error('The photo must be under 5 MB for AI suggestions.');const mimeType=['image/jpeg','image/png','image/webp'].includes(blob.type)?blob.type:'image/jpeg';const bytes=new Uint8Array(await blob.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,i+0x8000));const imageBase64=btoa(binary);
-    const response=await fetch(`${connection.supabaseUrl}/functions/v1/studio-generate`,{method:'POST',headers:{apikey:connection.publishableKey,Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json'},body:JSON.stringify({title,mimeType,imageBase64}),signal:AbortSignal.timeout(90000)});const result=await response.json().catch(()=>null);if(!response.ok)throw new Error(result?.error||`Suggestion failed (${response.status}).`);
+    let result;
+    if(connection.suggestionMode==='direct'){
+      if(!connection.geminiApiKey)throw new Error('This installer has no Gemini key. Add it to the private build file and rebuild.');
+      const categories=[...field('category').options].map(option=>option.value).filter(Boolean);
+      const prompt=`Write a natural, human-sounding product description using only facts visible in the photo or stated in the title. Do not invent brands, materials, dimensions, features, prices, guarantees, or performance claims. Avoid sales clich?s and overly polished marketing language. Return one JSON object only: {"description":"...","category":"...","tags":["..."]}. Description: normal length, about 30-45 words in 2 short sentences, plain conversational language, maximum 440 characters. Do not use emojis, em dashes, or en dashes. Choose exactly one category from this list: ${categories.join(' | ')}. Tags: 4-8 relevant short search phrases, each max 40 characters, no hashtags. Product title: ${title}`;
+      const response=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent',{method:'POST',headers:{'x-goog-api-key':connection.geminiApiKey,'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt},{inline_data:{mime_type:mimeType,data:imageBase64}}]}],generationConfig:{responseMimeType:'application/json',temperature:0.3}}),signal:AbortSignal.timeout(90000)});
+      const data=await response.json().catch(()=>null);if(!response.ok)throw new Error(response.status===429?'Gemini free-tier limit reached. Wait a little and try again.':data?.error?.message||`Gemini request failed (${response.status}).`);
+      const text=data?.candidates?.[0]?.content?.parts?.map(part=>part.text||'').join('');try{result=JSON.parse(text||'{}');}catch{throw new Error('Gemini returned an unreadable suggestion. Try again.');}
+      result.description=typeof result.description==='string'?result.description.replace(/[\u2014\u2013]/g,',').replace(/[\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Modifier}\uFE0F\u200D]/gu,'').replace(/\s+([,.!?])/g,'$1').replace(/,{2,}/g,',').replace(/\s{2,}/g,' ').trim().slice(0,440):'';
+      if(!result.description)throw new Error('Gemini returned an empty description. Try again.');if(!categories.includes(result.category))result.category=categories[0];
+      result.tags=Array.isArray(result.tags)?[...new Set(result.tags.filter(tag=>typeof tag==='string').map(tag=>tag.trim().slice(0,40)).filter(Boolean))].slice(0,12):[];
+    }else{
+      const response=await fetch(`${connection.supabaseUrl}/functions/v1/studio-generate`,{method:'POST',headers:{apikey:connection.publishableKey,Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json'},body:JSON.stringify({title,mimeType,imageBase64}),signal:AbortSignal.timeout(90000)});result=await response.json().catch(()=>null);if(!response.ok)throw new Error(result?.error||`Suggestion failed (${response.status}).`);
+    }
     if(field('title').value.trim()!==title||mediaItems.find(item=>item.kind==='image')!==poster)return;
     const desc=field('description'),category=field('category');if(!desc.value.trim()||desc.value===generatedDetails.description){desc.value=result.description;generatedDetails.description=result.description;}
     if(!category.value||category.value===generatedDetails.category){category.value=result.category;generatedDetails.category=result.category;}
@@ -97,7 +110,7 @@ function readConnection(settings) {
   const key=settings.publishableKey || '';if(!key.startsWith('sb_publishable_'))throw new Error('The local Studio is missing its public Supabase configuration.');
   const site=safeUrl(settings.siteUrl || '');
   if(site.pathname!=='/' || site.search || site.hash)throw new Error('Website URL should be only the origin, for example https://your-worker.workers.dev');
-  return {supabaseUrl:url.origin,publishableKey:key,siteUrl:site.origin};
+  return {supabaseUrl:url.origin,publishableKey:key,siteUrl:site.origin,suggestionMode:settings.suggestionMode||'supabase',geminiApiKey:settings.geminiApiKey||''};
 }
 async function request(path, options={}, auth=true) {
   if(auth) {
@@ -332,7 +345,9 @@ $('save-local').addEventListener('click',()=>void locked(()=>saveLocal()));
 $('delete-local').addEventListener('click',()=>{if(!confirm('Delete this local draft and its saved files? Any product already in Supabase will remain.'))return;void locked(async()=>{await deleteDraft(createId,localVersion);await refreshLocal();fill();tell('Local draft deleted.');});});
 window.addEventListener('focus',()=>{if(!busy)void refreshLocal().catch(()=>{});});
 try {
-  const defaults=await (await fetch('/config.json')).json();connection=readConnection(defaults);
+  const defaults=await (await fetch('/config.json')).json();
+  if(defaults.suggestionMode==='direct'){try{defaults.geminiApiKey=(await (await fetch('/gemini-config.json')).json()).apiKey||'';}catch{defaults.geminiApiKey='';}}
+  connection=readConnection(defaults);
   lastBoard=localStorage.getItem('curated-studio-board') || '';
 }catch(error){connection=null;tell(error.message,true);}
 showWorkspace();fill();try{await refreshLocal();}catch(error){tell(`Local storage is unavailable: ${error.message}`,true);}

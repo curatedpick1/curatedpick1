@@ -9,3 +9,6 @@ coverage/
 !archive/**/.env.example
 archive/legacy-vite/build-output/
 desktop-app/setup.zip
+
+# Private Gemini key used only when building the trusted desktop installer
+desktop-app/private/gemini-api-key.txt

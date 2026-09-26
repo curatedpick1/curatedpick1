@@ -1,7 +1,7 @@
 {
   "name": "curated-studio",
   "productName": "Curated Studio",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "private": true,
   "description": "Offline product drafts and publishing for The Curated Pick",
   "author": "The Curated Pick",
@@ -9,7 +9,7 @@
   "scripts": {
     "prepare:app": "node prepare.mjs",
     "start": "npm run prepare:app && electron .",
-    "dist": "npm run prepare:app && electron-builder --win nsis --x64"
+    "dist": "node check-gemini-key.mjs && npm run prepare:app && electron-builder --win nsis --x64 && node publish-installer.mjs"
   },
   "devDependencies": {
     "electron": "44.3.0",
@@ -26,6 +26,7 @@
       "main.cjs",
       "studio-auth.cjs",
       "private/editor.json",
+      "private/gemini-api-key.json",
       "assets/**/*",
       "package.json"
     ],
