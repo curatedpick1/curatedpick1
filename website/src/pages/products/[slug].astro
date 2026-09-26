@@ -22,18 +22,20 @@ const otherStores=product?.stores.filter(store=>store!==primaryStore) || [];
     <div class="product-gallery">
       <div class="detail-image"><img id="gallery-main" src={product.poster_url} alt={product.poster_alt} width="1200" height="1500" fetchpriority="high" /><span class="detail-image-note">Product photos</span></div>
       {photos.length>1 && <div class="gallery-thumbs" aria-label="Product photos">{photos.map((photo,index)=><button type="button" data-gallery-url={photo.url} data-gallery-alt={photo.alt || product.poster_alt} aria-label={`Show photo ${index+1}`} aria-pressed={photo.url===product.poster_url}><img src={photo.url} alt="" width="80" height="100" loading="lazy" /></button>)}</div>}
+      <div class="gallery-highlights" aria-label="Shopping information"><div><span aria-hidden="true">⌕</span><strong>Compare stores</strong><small>Choose a retailer below</small></div><div><span aria-hidden="true">↗</span><strong>Retailer checkout</strong><small>Order with the store</small></div><div><span aria-hidden="true">♡</span><strong>Affiliate find</strong><small>No extra cost to you</small></div></div>
     </div>
     <div class="detail-copy">
-      <div class="detail-store-kicker"><span class="detail-store-dot" aria-hidden="true"></span>{primaryStore ? `Available from ${primaryStore.name}` : 'Curated find'}</div>
+      <div class="product-heading"><div class="detail-store-kicker"><span class="detail-store-dot" aria-hidden="true"></span>{primaryStore ? `Visit the ${primaryStore.name} store` : 'Curated find'}</div><span class="store-status">Affiliate store</span></div>
       <a class="eyebrow category-link" href={`/?category=${encodeURIComponent(product.category)}#discover`}>{product.category} <Icon name="arrow" size={14} /></a>
       <h1>{product.title}</h1>
       <p class="product-description">{product.description}</p>
       {primaryStore && <div class="primary-offer">
-        <div class="offer-heading"><div><span class="offer-label">SHOP THIS FIND</span><h2>{primaryStore.name}</h2></div><span class="offer-link-note">Price and availability at store</span></div>
-        <a href={primaryStore.url} class="primary-store-button" target="_blank" rel="sponsored nofollow noopener noreferrer"><span>View at {primaryStore.name}</span><Icon name="arrow" size={19} /></a>
+        <div class="offer-heading"><div><span class="offer-label">CHECK CURRENT PRICE</span><h2>{primaryStore.name}</h2></div><span class="offer-link-note">Price and availability at store</span></div>
+        <a href={primaryStore.url} class="primary-store-button" target="_blank" rel="sponsored nofollow noopener noreferrer"><span>Buy on {primaryStore.name}</span><Icon name="arrow" size={19} /></a>
         <p class="affiliate-note">We may earn a commission from qualifying purchases, at no extra cost to you. <a href="/disclosure/">Affiliate disclosure</a></p>
       </div>}
-      <section class="about-find" aria-labelledby="about-find-title"><h2 id="about-find-title">About this find</h2><p>{product.description}</p>
+      <section class="product-facts" aria-labelledby="product-facts-title"><h2 id="product-facts-title">Product information</h2><dl><div><dt>Category</dt><dd>{product.category}</dd></div><div><dt>Available at</dt><dd>{[primaryStore?.name,...otherStores.map(store=>store.name)].filter(Boolean).join(', ') || 'Store links coming soon'}</dd></div><div><dt>Product photos</dt><dd>{photos.length}</dd></div></dl></section>
+      <section class="about-find" aria-labelledby="about-find-title"><h2 id="about-find-title">About this item</h2><p>{product.description}</p>
         {product.tags.length > 0 && <nav class="product-tags" aria-label="Explore related interests">{product.tags.map(tag => <a href={`/?q=${encodeURIComponent(tag)}#discover`}>{tag}</a>)}</nav>}
       </section>
       {otherStores.length > 0 && <section class="other-stores" aria-labelledby="other-stores-title"><div class="other-stores-heading"><h2 id="other-stores-title">Compare stores</h2><p>Choose where you would like to shop.</p></div><div class="store-list">{otherStores.map((store) => <a href={store.url} class="store-button" target="_blank" rel="sponsored nofollow noopener noreferrer"><span class="store-monogram" aria-hidden="true">{store.name.slice(0, 1).toUpperCase()}</span><span class="store-label"><strong>{store.name}</strong><small>{store.note || merchantHost(store.url)}</small></span><Icon name="arrow" size={20} /></a>)}</div></section>}
@@ -88,35 +90,52 @@ const otherStores=product?.stores.filter(store=>store!==primaryStore) || [];
   });
 </script>
 <style>
-  .product-detail{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:28px;align-items:start;padding-bottom:54px}
-  .product-gallery{position:sticky;top:94px;min-width:0;padding:12px;border:1px solid var(--line);border-radius:16px;background:var(--surface);box-shadow:0 2px 8px #0b1c3008}
-  .product-gallery .detail-image{position:relative;top:auto;border:1px solid color-mix(in srgb,var(--line),transparent 45%);border-radius:12px;background:var(--surface)}
-  .product-gallery .detail-image img{aspect-ratio:1/1;object-fit:contain;background:var(--surface);padding:14px}
-  .product-gallery .detail-image-note{bottom:12px;left:12px;font-size:10px}
-  .detail-copy{padding:8px 0 0;min-width:0}
-  .detail-store-kicker{display:flex;align-items:center;gap:7px;margin-bottom:12px;color:var(--green);font-size:11px;font-weight:700}
-  .detail-store-dot{width:7px;height:7px;border-radius:50%;background:#21a77a;box-shadow:0 0 0 3px color-mix(in srgb,#21a77a,transparent 86%)}
-  .detail-copy h1{font-size:clamp(27px,3vw,37px);line-height:1.17;letter-spacing:-1px;margin-block:8px 12px}
-  .product-description{font-size:14px;line-height:1.75}
-  .primary-offer{margin-top:23px;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
-  .offer-heading{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:13px}
-  .offer-heading h2{font-size:20px;margin-top:3px}
-  .offer-label{font-size:9px;font-weight:750;letter-spacing:.09em;color:var(--muted)}
-  .offer-link-note{color:var(--muted);font-size:10px;text-align:right}
-  .primary-store-button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:50px;padding:0 17px;border-radius:9px;background:var(--green);color:#fff;font-size:14px;font-weight:750;transition:filter .2s,transform .2s}
-  .primary-store-button:hover{filter:brightness(.92);transform:translateY(-1px)}
+  :global(html:has(.product-detail)){--paper:#f7f8fc;--surface:#fff;--ink:#182235;--muted:#617083;--green:#08745f;--line:#e0e5ec;--sage:#f4f6fa;color-scheme:light}
+  .product-detail{grid-template-columns:minmax(300px,.82fr) minmax(0,1.18fr);gap:22px;align-items:start;padding-bottom:46px;color:#182235}
+  .product-gallery,.detail-copy{min-width:0;padding:16px;border:1px solid #e0e5ec;border-radius:14px;background:#fff;box-shadow:0 2px 5px #1822350a}
+  .product-gallery{position:sticky;top:20px}
+  .product-gallery .detail-image{position:relative;top:auto;border:1px solid #edf0f4;border-radius:11px;background:#fff}
+  .product-gallery .detail-image img{aspect-ratio:1/1;object-fit:contain;background:#fff;padding:12px}
+  .product-gallery .detail-image-note{bottom:12px;left:12px;padding:5px 9px;font-size:9px;background:#fff;color:#08745f}
+  .gallery-thumbs{display:flex;gap:9px;overflow-x:auto;padding:12px 0 4px}
+  .gallery-thumbs button{flex:0 0 58px;border:1px solid #e5e9ef;border-radius:8px;padding:3px;background:#fff;cursor:pointer}
+  .gallery-thumbs button[aria-pressed=true]{border:2px solid #08745f;padding:2px}
+  .gallery-thumbs img{display:block;width:100%;height:56px;object-fit:contain}
+  .gallery-thumbs button:focus-visible{outline:2px solid #08745f;outline-offset:2px}
+  .gallery-highlights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding-top:12px;margin-top:10px;border-top:1px solid #edf0f4}
+  .gallery-highlights>div{display:grid;justify-items:center;gap:4px;padding:10px 5px;border-radius:8px;background:#f7f8fb;text-align:center}
+  .gallery-highlights span{color:#08745f;font-size:16px;line-height:1}
+  .gallery-highlights strong{font-size:10px;color:#182235}
+  .gallery-highlights small{font-size:8px;color:#738093}
+  .detail-copy{padding:20px}
+  .product-heading{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .detail-store-kicker{display:flex;align-items:center;gap:6px;margin:0;color:#08745f;font-size:10px;font-weight:700}
+  .detail-store-dot{width:7px;height:7px;border-radius:50%;background:#18a879}
+  .store-status{padding:3px 7px;border-radius:20px;background:#eef8f4;color:#08745f;font-size:9px;font-weight:650}
+  .category-link{display:inline-flex;align-items:center;gap:5px;margin-top:11px;color:#08745f;font-size:10px;font-weight:700}
+  .detail-copy h1{font-size:clamp(25px,2.6vw,34px);line-height:1.14;letter-spacing:-.8px;margin:7px 0 12px;color:#182235}
+  .product-description{font-size:13px;line-height:1.72;color:#4d596a}
+  .primary-offer{margin-top:17px;padding:14px;border:1px solid #e2e6ed;border-radius:12px;background:#f8f9fc}
+  .offer-heading{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:10px}
+  .offer-heading h2{font-size:17px;margin-top:3px;color:#182235}
+  .offer-label{font-size:8px;font-weight:750;letter-spacing:.09em;color:#617083}
+  .offer-link-note{color:#718095;font-size:9px;text-align:right}
+  .primary-store-button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:42px;padding:0 14px;border-radius:8px;background:#ff9900;color:#fff;font-size:12px;font-weight:750;transition:filter .2s,transform .2s}
+  .primary-store-button:hover{filter:brightness(.95);transform:translateY(-1px)}
   .primary-store-button svg{transform:rotate(-45deg)}
-  .primary-offer .affiliate-note{margin-top:10px;font-size:10px}
-  .about-find{margin-top:20px;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
-  .about-find h2,.other-stores h2{font-size:14px;letter-spacing:0;text-transform:uppercase}
-  .about-find>p{font-size:13px;color:var(--muted);line-height:1.8;margin-top:10px}
-  .about-find .product-tags{margin-top:14px}
-  .other-stores{margin-top:20px;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
-  .other-stores-heading p{font-size:11px;color:var(--muted);margin-top:4px}
-  .other-stores .store-list{margin-top:12px;gap:8px}
-  .other-stores .store-button{min-height:62px;padding:10px 12px}
-  .other-stores .store-monogram{width:32px;height:32px;font-size:16px}
-  .purchase-note{padding:0 3px}
-  @media(max-width:700px){.product-detail{grid-template-columns:1fr;gap:18px}.product-gallery{position:static}.product-gallery .detail-image img{aspect-ratio:1.12}.detail-copy{padding-top:2px}.detail-copy h1{font-size:30px}.primary-offer,.about-find,.other-stores{padding:15px}}
-  .gallery-thumbs{display:flex;gap:10px;overflow-x:auto;padding:12px 2px}.gallery-thumbs button{flex:0 0 70px;border:2px solid transparent;border-radius:8px;padding:3px;background:var(--surface);cursor:pointer}.gallery-thumbs button[aria-pressed=true]{border-color:var(--green)}.gallery-thumbs img{display:block;width:100%;height:80px;object-fit:contain}.gallery-thumbs button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  .primary-offer .affiliate-note{margin-top:8px;font-size:8px;line-height:1.6;color:#617083}
+  .about-find,.product-facts,.other-stores{margin-top:14px;padding:15px;border:1px solid #e2e6ed;border-radius:12px;background:#fff}
+  .about-find h2,.product-facts h2,.other-stores h2{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#182235}
+  .about-find>p{font-size:12px;color:#4d596a;line-height:1.75;margin-top:9px}
+  .about-find .product-tags{margin-top:12px}
+  .about-find .product-tags a{background:#f0f3f7;color:#526175;font-size:9px;padding:5px 9px}
+  .product-facts dl{display:grid;grid-template-columns:1fr 1fr;gap:9px 18px;margin-top:12px}
+  .product-facts dl>div{display:grid;grid-template-columns:minmax(72px,.7fr) minmax(0,1.3fr);gap:8px;font-size:10px}
+  .product-facts dt{color:#718095}.product-facts dd{margin:0;color:#182235;font-weight:650;overflow-wrap:anywhere}
+  .other-stores-heading p{font-size:10px;color:#617083;margin-top:4px}
+  .other-stores .store-list{margin-top:10px;gap:7px}
+  .other-stores .store-button{min-height:52px;padding:8px 10px;border-color:#e2e6ed}
+  .other-stores .store-monogram{width:29px;height:29px;font-size:14px;background:#f0f3f7;color:#08745f}
+  .purchase-note{padding:0 3px;color:#68768a;font-size:9px}
+  @media(max-width:760px){.product-detail{grid-template-columns:1fr;gap:14px;padding-bottom:30px}.product-gallery{position:static}.product-gallery .detail-image img{aspect-ratio:1.05}.detail-copy{padding:16px}.detail-copy h1{font-size:28px}.product-facts dl{grid-template-columns:1fr}.gallery-highlights strong{font-size:9px}}
 </style>
