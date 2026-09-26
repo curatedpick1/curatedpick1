@@ -5,4 +5,4 @@ To include direct Gemini suggestions in the Windows installer:
 2. From desktop-app, run npm run dist.
 3. Send desktop-app\release\Curated-Studio-Setup-1.6.0.exe to trusted admins.
 
-The key is inside the installer and can be extracted by recipients. Suggestions send the product title and selected photo to Google Gemini. The app does not send those fields to Supabase for AI suggestions. Supabase receives product data when you publish.
+The key is inside the installer and can be extracted by recipients. The installer stays in the ignored private folder and is not pushed to GitHub. Suggestions send the product title and selected photo to Google Gemini. The app does not send those fields to Supabase for AI suggestions. Supabase receives product data when you publish.

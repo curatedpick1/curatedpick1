@@ -1,7 +1,7 @@
 CURATED STUDIO — WINDOWS APP
 
-Install distribution/Curated-Studio-Setup-1.6.0.exe, then open Curated Studio from your desktop or Start menu.
-Send that same installer to another Windows PC. Node.js and terminal commands are not needed.
+Install private/Curated-Studio-Setup-1.6.0.exe, then open Curated Studio from your desktop or Start menu.
+Send that same private installer to another Windows PC. Node.js and terminal commands are not needed.
 This is an unsigned private build, so Windows may show an unknown-publisher notice.
 Open the app and publish. No password, signup or settings are needed.
 Anyone with this configured installer can add and edit products. Share it only with your admins.
