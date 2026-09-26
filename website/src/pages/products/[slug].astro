@@ -8,10 +8,11 @@ export const prerender = false;
 Astro.response.headers.set('Cache-Control', 'no-store, max-age=0');
 const catalog = await getCatalog();
 const product = catalog.products.find(candidate => candidate.slug === Astro.params.slug);
-const demo = catalog.demo;
 if (!product) Astro.response.status = 404;
 const related = product ? relatedProducts(product, catalog.products) : [];
 const photos=product?.images?.length?product.images:product?[{url:product.poster_url,alt:product.poster_alt}]:[];
+const primaryStore=product?.stores.find(store=>store.name.toLowerCase()==='amazon') || product?.stores[0];
+const otherStores=product?.stores.filter(store=>store!==primaryStore) || [];
 ---
 {product ? (
 <Layout title={`${product.title} — The Curated Pick`} description={product.description} image={product.poster_url} demo={catalog.demo} catalogRevision={catalog.revision}>
@@ -19,17 +20,25 @@ const photos=product?.images?.length?product.images:product?[{url:product.poster
   <div class="share-fallback wrap" id="share-fallback" hidden><label for="share-url">Copy this product link to share it</label><input id="share-url" type="url" readonly /></div>
   <section class="product-detail wrap" data-product-id={product.id} data-product-revision={product.revision}>
     <div class="product-gallery">
-      <div class="detail-image"><img id="gallery-main" src={product.poster_url} alt={product.poster_alt} width="1200" height="1500" fetchpriority="high" /><span class="detail-image-note">A closer look</span></div>
+      <div class="detail-image"><img id="gallery-main" src={product.poster_url} alt={product.poster_alt} width="1200" height="1500" fetchpriority="high" /><span class="detail-image-note">Product photos</span></div>
       {photos.length>1 && <div class="gallery-thumbs" aria-label="Product photos">{photos.map((photo,index)=><button type="button" data-gallery-url={photo.url} data-gallery-alt={photo.alt || product.poster_alt} aria-label={`Show photo ${index+1}`} aria-pressed={photo.url===product.poster_url}><img src={photo.url} alt="" width="80" height="100" loading="lazy" /></button>)}</div>}
     </div>
-    <div class="detail-copy"><a class="eyebrow category-link" href={`/?category=${encodeURIComponent(product.category)}#discover`}>{product.category} <Icon name="arrow" size={14} /></a><h1>{product.title}</h1><p class="product-description">{product.description}</p>
-      <div class="store-section"><div class="store-heading"><h2>Like it? Choose your store.</h2><p>Check current prices, options & delivery.</p></div>
-        {product.stores.length ? <div class="store-list">{product.stores.map((store) => <a href={store.url} class="store-button" target="_blank" rel="sponsored nofollow noopener noreferrer"><span class="store-monogram" aria-hidden="true">{store.name.slice(0, 1).toUpperCase()}</span><span class="store-label"><strong>View on {store.name}</strong><small>{store.note || merchantHost(store.url)}</small></span><Icon name="arrow" size={20} /></a>)}</div> : <div class="store-empty"><p>{demo ? 'Example store choices' : 'Store links are coming soon.'}</p><span>{demo ? 'These sample buttons are inactive. Your actual store links will appear here after setup.' : 'Explore more finds while we finish this one.'}</span></div>}
-        {demo && !product.stores.length && <div class="store-list" aria-label="Example store buttons, inactive in preview">{['Amazon', 'AliExpress'].map(name => <button class="store-button" disabled><span class="store-monogram" aria-hidden="true">{name.slice(0, 1)}</span><span class="store-label"><strong>View on {name}</strong><small>Example only</small></span><Icon name="arrow" size={20} /></button>)}</div>}
-        <p class="purchase-note">You’ll order directly from your chosen store. Check the exact model, seller, shipping, and return terms there.</p>
-        <p class="affiliate-note">We may earn a commission when you shop through these links, at no extra cost to you. <a href="/disclosure/">How our links work</a></p>
-      </div>
-      {product.tags.length > 0 && <nav class="product-tags" aria-label="Explore related interests">{product.tags.map(tag => <a href={`/?q=${encodeURIComponent(tag)}#discover`}>{tag}</a>)}</nav>}
+    <div class="detail-copy">
+      <div class="detail-store-kicker"><span class="detail-store-dot" aria-hidden="true"></span>{primaryStore ? `Available from ${primaryStore.name}` : 'Curated find'}</div>
+      <a class="eyebrow category-link" href={`/?category=${encodeURIComponent(product.category)}#discover`}>{product.category} <Icon name="arrow" size={14} /></a>
+      <h1>{product.title}</h1>
+      <p class="product-description">{product.description}</p>
+      {primaryStore && <div class="primary-offer">
+        <div class="offer-heading"><div><span class="offer-label">SHOP THIS FIND</span><h2>{primaryStore.name}</h2></div><span class="offer-link-note">Price and availability at store</span></div>
+        <a href={primaryStore.url} class="primary-store-button" target="_blank" rel="sponsored nofollow noopener noreferrer"><span>View at {primaryStore.name}</span><Icon name="arrow" size={19} /></a>
+        <p class="affiliate-note">We may earn a commission from qualifying purchases, at no extra cost to you. <a href="/disclosure/">Affiliate disclosure</a></p>
+      </div>}
+      <section class="about-find" aria-labelledby="about-find-title"><h2 id="about-find-title">About this find</h2><p>{product.description}</p>
+        {product.tags.length > 0 && <nav class="product-tags" aria-label="Explore related interests">{product.tags.map(tag => <a href={`/?q=${encodeURIComponent(tag)}#discover`}>{tag}</a>)}</nav>}
+      </section>
+      {otherStores.length > 0 && <section class="other-stores" aria-labelledby="other-stores-title"><div class="other-stores-heading"><h2 id="other-stores-title">Compare stores</h2><p>Choose where you would like to shop.</p></div><div class="store-list">{otherStores.map((store) => <a href={store.url} class="store-button" target="_blank" rel="sponsored nofollow noopener noreferrer"><span class="store-monogram" aria-hidden="true">{store.name.slice(0, 1).toUpperCase()}</span><span class="store-label"><strong>{store.name}</strong><small>{store.note || merchantHost(store.url)}</small></span><Icon name="arrow" size={20} /></a>)}</div></section>}
+      {!primaryStore && <div class="store-empty"><p>Store links are coming soon.</p><span>Explore more finds while we finish this one.</span></div>}
+      <p class="purchase-note">Prices, reviews, shipping, and availability can change. Check the retailer's page for current details before ordering.</p>
     </div>
   </section>
   {related.length > 0 && <section class="related-section wrap" aria-labelledby="related-title"><div class="section-heading"><div><p class="eyebrow">KEEP EXPLORING</p><h2 id="related-title">You might like these too</h2></div><a class="text-link" href="/#discover">View all finds <Icon name="right" size={16} /></a></div><div class="product-grid related-grid">{related.map((pick, index) => <ProductCard product={pick} index={index + 2} />)}</div></section>}
@@ -66,5 +75,35 @@ const photos=product?.images?.length?product.images:product?[{url:product.poster
   });
 </script>
 <style>
-  .product-gallery{position:sticky;top:95px;min-width:0}.product-gallery .detail-image{position:relative;top:auto}.product-gallery .detail-image img{aspect-ratio:4/5;object-fit:contain;background:white}.gallery-thumbs{display:flex;gap:10px;overflow-x:auto;padding:12px 2px}.gallery-thumbs button{flex:0 0 70px;border:2px solid transparent;border-radius:8px;padding:3px;background:white;cursor:pointer}.gallery-thumbs button[aria-pressed=true]{border-color:var(--green)}.gallery-thumbs img{display:block;width:100%;height:80px;object-fit:contain}.gallery-thumbs button:focus-visible{outline:2px solid var(--green);outline-offset:2px}@media(max-width:650px){.product-gallery{position:static}}
+  .product-detail{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:28px;align-items:start;padding-bottom:54px}
+  .product-gallery{position:sticky;top:94px;min-width:0;padding:12px;border:1px solid var(--line);border-radius:16px;background:var(--surface);box-shadow:0 2px 8px #0b1c3008}
+  .product-gallery .detail-image{position:relative;top:auto;border:1px solid color-mix(in srgb,var(--line),transparent 45%);border-radius:12px;background:var(--surface)}
+  .product-gallery .detail-image img{aspect-ratio:1/1;object-fit:contain;background:var(--surface);padding:14px}
+  .product-gallery .detail-image-note{bottom:12px;left:12px;font-size:10px}
+  .detail-copy{padding:8px 0 0;min-width:0}
+  .detail-store-kicker{display:flex;align-items:center;gap:7px;margin-bottom:12px;color:var(--green);font-size:11px;font-weight:700}
+  .detail-store-dot{width:7px;height:7px;border-radius:50%;background:#21a77a;box-shadow:0 0 0 3px color-mix(in srgb,#21a77a,transparent 86%)}
+  .detail-copy h1{font-size:clamp(27px,3vw,37px);line-height:1.17;letter-spacing:-1px;margin-block:8px 12px}
+  .product-description{font-size:14px;line-height:1.75}
+  .primary-offer{margin-top:23px;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+  .offer-heading{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:13px}
+  .offer-heading h2{font-size:20px;margin-top:3px}
+  .offer-label{font-size:9px;font-weight:750;letter-spacing:.09em;color:var(--muted)}
+  .offer-link-note{color:var(--muted);font-size:10px;text-align:right}
+  .primary-store-button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:50px;padding:0 17px;border-radius:9px;background:var(--green);color:#fff;font-size:14px;font-weight:750;transition:filter .2s,transform .2s}
+  .primary-store-button:hover{filter:brightness(.92);transform:translateY(-1px)}
+  .primary-store-button svg{transform:rotate(-45deg)}
+  .primary-offer .affiliate-note{margin-top:10px;font-size:10px}
+  .about-find{margin-top:20px;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+  .about-find h2,.other-stores h2{font-size:14px;letter-spacing:0;text-transform:uppercase}
+  .about-find>p{font-size:13px;color:var(--muted);line-height:1.8;margin-top:10px}
+  .about-find .product-tags{margin-top:14px}
+  .other-stores{margin-top:20px;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+  .other-stores-heading p{font-size:11px;color:var(--muted);margin-top:4px}
+  .other-stores .store-list{margin-top:12px;gap:8px}
+  .other-stores .store-button{min-height:62px;padding:10px 12px}
+  .other-stores .store-monogram{width:32px;height:32px;font-size:16px}
+  .purchase-note{padding:0 3px}
+  @media(max-width:700px){.product-detail{grid-template-columns:1fr;gap:18px}.product-gallery{position:static}.product-gallery .detail-image img{aspect-ratio:1.12}.detail-copy{padding-top:2px}.detail-copy h1{font-size:30px}.primary-offer,.about-find,.other-stores{padding:15px}}
+  .gallery-thumbs{display:flex;gap:10px;overflow-x:auto;padding:12px 2px}.gallery-thumbs button{flex:0 0 70px;border:2px solid transparent;border-radius:8px;padding:3px;background:var(--surface);cursor:pointer}.gallery-thumbs button[aria-pressed=true]{border-color:var(--green)}.gallery-thumbs img{display:block;width:100%;height:80px;object-fit:contain}.gallery-thumbs button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 </style>
