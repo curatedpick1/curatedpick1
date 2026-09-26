@@ -1,7 +1,5 @@
 const categories = [
-  'Home & living', 'Tech & desk', 'Kitchen & dining', 'On the go', 'Style & essentials',
-  'Beauty & care', 'Fashion', 'Travel', 'Fitness & wellness', 'Baby & kids', 'Pets',
-  'Office & study', 'Gifts', 'Outdoor', 'Gaming', 'Automotive', 'Deals',
+  'Home & living', 'Home decor', 'Furniture', 'Lighting', 'Storage & organization', 'Bedding & bath', 'Cleaning & laundry', 'Kitchen & dining', 'Cookware & bakeware', 'Small appliances', 'Home improvement', 'Garden & plants', 'Patio & outdoor', 'Tools & DIY', 'Tech & electronics', 'Phones & accessories', 'Computers & gaming', 'Office & study', 'Audio & headphones', 'Cameras & photography', 'Travel & luggage', 'Bags & accessories', 'Fashion', 'Shoes', 'Jewelry & accessories', 'Beauty & skincare', 'Hair care', 'Personal care', 'Fitness & wellness', 'Sports & outdoors', 'Baby & kids', 'Toys & games', 'Pet supplies', 'Car & automotive', 'Crafts & hobbies', 'Books & stationery', 'Gifts & occasions', 'Party supplies', 'Food & drink', 'Deals & finds', 'Sustainable living', 'Health & wellness', 'Smart home', 'Desk accessories', 'Wall art & prints', 'Rugs & curtains', 'Dining & entertaining', 'Laundry & organization', 'Outdoor recreation', 'Seasonal finds'
 ];
 
 const cors = {
