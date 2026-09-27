@@ -1,0 +1,15 @@
+---
+import type { StoreLink } from '../../shared/catalog';
+import { retailerDetails } from '../../shared/retailer';
+const {store,mode='all'}=Astro.props as {store:StoreLink;mode?:'all'|'price'|'reviews'};
+const details=retailerDetails(store);
+---
+{mode!=='reviews' && details.price && <div class="retailer-price"><strong>{details.price}</strong><small>Checked {new Date(details.checkedAt!).toLocaleString('en-US',{timeZone:'UTC'})} UTC. Final price at checkout.</small></div>}
+{mode!=='price' && <a class="retailer-reviews" href={details.reviewUrl} target="_blank" rel="sponsored nofollow noopener noreferrer">
+  {details.rating !== undefined && <span class="rating">★ {details.rating.toFixed(1)}</span>}
+  {details.count !== undefined ? `${details.count.toLocaleString('en-US')} customer reviews at ${store.name}` : `Read customer reviews at ${store.name}`} ↗
+</a>}
+<style>
+  .retailer-price{display:grid;gap:6px;margin:16px 0}.retailer-price strong{font-size:32px;color:var(--ink)}small{color:var(--muted);font-size:11px}
+  .retailer-reviews{display:inline-flex;align-items:center;flex-wrap:wrap;gap:7px;min-height:44px;margin-block:6px;font-size:13px;color:var(--green);text-decoration:underline;text-underline-offset:4px}.rating{color:var(--ink);font-weight:700}
+</style>

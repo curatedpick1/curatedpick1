@@ -12,7 +12,7 @@
 }
 @layer base {
   :root { --paper: #f8f9ff; --surface: #ffffff; --ink: #0b1c30; --muted: #536174; --green: #006b5b; --accent: #26fedc; --sage: #e5eeff; --line: #dce3ee; --hero: #e5eeff; --sans: 'DM Sans Variable', sans-serif; color-scheme: light; }
-  :root[data-theme='dark'] { --paper: #080f19; --surface: #101e2e; --ink: #edf4ff; --muted: #aabacf; --green: #72ebd5; --accent: #26fedc; --sage: #1a3046; --line: #26394e; --hero: #102237; color-scheme: dark; }
+  :root[data-theme='dark'] { --paper: #131719; --surface: #1c2225; --ink: #f1f3f2; --muted: #b4bfbd; --green: #9bd3bb; --accent: #9bd3bb; --sage: #293b34; --line: #35413e; --hero: #202d28; color-scheme: dark; }
   html { scroll-behavior: smooth; scroll-padding-top: 90px; }
   body { background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
   ::selection { background: #b4f7e8; color: #06392f; }

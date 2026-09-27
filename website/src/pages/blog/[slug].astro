@@ -1,0 +1,23 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import BlogContent from '../../components/BlogContent.astro';
+import { getCatalog } from '../../lib/catalog';
+export const prerender = false;
+const catalog = await getCatalog();
+const product = catalog.products.find(p => p.slug === Astro.params.slug && p.blog_content?.length);
+if (!product) Astro.response.status = 404;
+const excerpt = product?.blog_content?.flatMap(b => b.type === 'rich_text' ? b.runs.map(r => r.text) : 'text' in b ? [b.text] : []).join(' ').slice(0, 160);
+const article = product ? {'@context':'https://schema.org','@type':'BlogPosting',headline:product.blog_title,description:excerpt,image:product.poster_url,mainEntityOfPage:Astro.url.href,author:{'@type':'Organization',name:'The Curated Pick'},publisher:{'@type':'Organization',name:'The Curated Pick'},about:{'@type':'Product',name:product.title,url:new URL(`/products/${product.slug}/`,Astro.url.origin).href}} : null;
+---
+<Layout title={product ? `${product.blog_title} | The Curated Pick` : 'Article not found'} description={excerpt} image={product?.poster_url} demo={catalog.demo} noindex={!product} catalogRevision={catalog.revision}>
+  {product ? <article class="article wrap">
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(article).replaceAll('<','\\u003c')} />
+    <a class="text-link" href={`/products/${product.slug}/`}>← Back to {product.title}</a>
+    <header><p class="eyebrow">The Curated Pick · {product.category}</p><h1>{product.blog_title}</h1><p class="byline">By The Curated Pick · {Math.max(1,Math.ceil((product.blog_content || []).map(b=>'text' in b?b.text:b.type==='rich_text'?b.runs.map(r=>r.text).join(' '):'').join(' ').split(/\s+/).length/220))} min read</p></header>
+    <BlogContent blocks={product.blog_content} />
+    <aside><img src={product.poster_url} alt={product.poster_alt} width="90" height="90"/><div><p>Explore the product</p><h2>{product.title}</h2><a class="text-link" href={`/products/${product.slug}/`}>Photos & store links →</a></div></aside>
+  </article> : <div class="empty-state wrap"><h1>This article is not available.</h1><a class="text-link" href="/">Browse the collection →</a></div>}
+</Layout>
+<style>
+  .article{max-width:860px;padding-block:28px 80px}.article header{padding:32px 0;border-bottom:1px solid var(--line);margin-bottom:32px}.eyebrow,.byline{color:var(--muted)}h1{font-size:clamp(32px,5vw,52px);margin:16px 0;line-height:1.12}.article aside{display:flex;gap:22px;align-items:center;border-top:1px solid var(--line);margin-top:40px;padding-top:28px}.article aside img{object-fit:contain;background:#fff;border-radius:10px}.article aside h2{font-size:20px}.article aside p{color:var(--muted)}
+</style>

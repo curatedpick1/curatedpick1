@@ -1,7 +1,7 @@
 {
   "name": "curated-studio",
   "productName": "Curated Studio",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "private": true,
   "description": "Offline product drafts and publishing for The Curated Pick",
   "author": "The Curated Pick",
@@ -24,6 +24,7 @@
     },
     "files": [
       "main.cjs",
+      "document-import.cjs",
       "studio-auth.cjs",
       "private/editor.json",
       "private/gemini-api-key.json",
@@ -52,5 +53,10 @@
       "runAfterFinish": false,
       "deleteAppDataOnUninstall": false
     }
+  },
+  "dependencies": {
+    "mammoth": "^1.13.0",
+    "pdfjs-dist": "^6.3.289",
+    "word-extractor": "^1.0.4"
   }
 }

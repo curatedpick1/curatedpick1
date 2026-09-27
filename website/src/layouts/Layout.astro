@@ -53,7 +53,7 @@ const { catalogRevision } = Astro.props;
     <main id="main"><slot /></main>
     <footer class="site-footer">
       <div class="wrap footer-top"><div><a class="wordmark footer-brand" href="/"><img src="/favicon.svg" width="32" height="32" alt="" />The Curated Pick</a><p>Good products. A little less searching.</p></div><a class="pill-button secondary" href={pinterest} target="_blank" rel="noopener noreferrer">More finds on Pinterest <Icon name="arrow" size={16} /></a></div>
-      <div class="wrap footer-bottom"><p>&copy; {new Date().getFullYear()} The Curated Pick</p><nav aria-label="Footer"><a href="/about/">About</a><a href="/disclosure/">Affiliate disclosure</a><a href="/privacy/">Privacy</a><a href="/contact/">Contact</a></nav></div>
+      <div class="wrap footer-bottom"><p>&copy; {new Date().getFullYear()} The Curated Pick</p><nav aria-label="Footer"><a href="/blog/">Journal</a><a href="/about/">About</a><a href="/disclosure/">Affiliate disclosure</a><a href="/privacy/">Privacy</a><a href="/contact/">Contact</a></nav></div>
       <p class="wrap legal-line">As an Amazon Associate I earn from qualifying purchases. Other store links may also earn us a commission, at no extra cost to you.</p>
     </footer>
     <nav class="bottom-nav" aria-label="Quick navigation"><a href="/" aria-current={Astro.url.pathname === '/' ? 'page' : undefined}><Icon name="home" size={19} /><span>Home</span></a><a href="/#discover"><Icon name="grid" size={19} /><span>Explore</span></a><a href={pinterest} target="_blank" rel="noopener noreferrer"><Icon name="arrow" size={19} /><span>Pinterest</span></a></nav>

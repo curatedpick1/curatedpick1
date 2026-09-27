@@ -1,0 +1,15 @@
+---
+const { name } = Astro.props as { name: string };
+const key = name.toLowerCase().replace(/[^a-z]/g, '');
+const icons = import.meta.glob('/public/stores/*.{ico,svg,png}',{eager:true,query:'?url',import:'default'});
+const icon = Object.keys(icons).find(path => ['ico','svg','png'].some(ext=>path.endsWith(`/${key}.${ext}`)));
+---
+<span class="store-brand">
+  {icon && <span class="logo-tile"><img src={icon.replace('/public','')} alt="" width="28" height="28" /></span>}
+  <span>{name}</span>
+</span>
+<style>
+  .store-brand{display:inline-flex;align-items:center;gap:10px;font-size:15px;font-weight:700;color:var(--ink);line-height:1.2}
+  .logo-tile{display:grid;place-items:center;width:38px;height:38px;border-radius:9px;background:#fff;border:1px solid #e5e7eb}
+  img{width:28px;height:28px;object-fit:contain}
+</style>

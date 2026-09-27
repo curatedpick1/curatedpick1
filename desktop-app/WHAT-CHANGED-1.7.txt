@@ -1,0 +1,29 @@
+Curated Studio 1.7
+
+Installer: private/Curated-Studio-Setup-1.7.0.exe
+Install over the existing app. Local drafts are kept.
+
+To publish an article:
+1. Open a product and expand More details.
+2. Write in the blog editor, or choose Import an article (PDF, DOC, DOCX).
+3. Review the imported text. Add headings, formatting and product images.
+4. Publish. The article appears below the product and at /blog/PRODUCT-SLUG/.
+
+Imports read text on this PC. They do not upload the original document.
+Images and original page layout are not imported. Scanned PDFs need OCR first.
+Maximum document size: 10 MB. PDF limit: 60 pages. Article limit: 40 blocks.
+
+Website: related products use the same category. With an article, the desktop
+layout is 25% related products and 75% article. Without one, related products
+use the full width. Mobile shows the article and then related products.
+
+Real retailer logos are included. Prices and review counts appear only when
+fresh retailer API data is available. No retailer data API is connected yet;
+until then, links take visitors to the retailer for prices and reviews.
+
+Developer commands, from desktop-app:
+npm ci
+npm start
+npm run dist
+
+The configured installer is private and excluded from Git.

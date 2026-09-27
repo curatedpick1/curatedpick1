@@ -2,6 +2,7 @@ const {app, BrowserWindow, protocol, session, shell, dialog, Menu} = require('el
 const {readFile} = require('node:fs/promises');
 const path = require('node:path');
 const {createStudioSession} = require('./studio-auth.cjs');
+const {importDocument} = require('./document-import.cjs');
 
 app.setName('Curated Studio');
 // A stable local origin keeps IndexedDB drafts across restarts and upgrades.
@@ -38,6 +39,14 @@ else {
     protocol.handle('curated', async request => {
       const url = new URL(request.url);
       const route = routes.get(url.pathname);
+      if(url.host==='studio' && url.pathname==='/import-document'){
+        if(request.method!=='POST')return new Response(null,{status:405,headers});
+        try{
+          if(Number(request.headers.get('content-length'))>10*1024*1024)throw new Error('Use a document smaller than 10 MB.');
+          const blocks=await importDocument(new Uint8Array(await request.arrayBuffer()),url.searchParams.get('type'));
+          return Response.json({blocks},{headers});
+        }catch(error){return Response.json({error:error.message},{status:400,headers});}
+      }
       if (url.host === 'studio' && url.pathname === '/session') {
         if (request.method !== 'POST') return new Response(null, {status:405, headers});
         try {return Response.json(await getSession(), {headers});}

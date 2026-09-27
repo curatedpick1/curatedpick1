@@ -1,6 +1,9 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import ProductCard from '../../components/ProductCard.astro';
+import StoreBrand from '../../components/StoreBrand.astro';
+import BlogContent from '../../components/BlogContent.astro';
+import RetailerDetails from '../../components/RetailerDetails.astro';
 import Icon from '../../components/Icon.astro';
 import { getCatalog } from '../../lib/catalog';
 import { relatedProducts, merchantHost } from '../../../shared/catalog';
@@ -13,6 +16,9 @@ const related = product ? relatedProducts(product, catalog.products) : [];
 const photos=product?.images?.length?product.images:product?[{url:product.poster_url,alt:product.poster_alt}]:[];
 const primaryStore=product?.stores.find(store=>store.name.toLowerCase()==='amazon') || product?.stores[0];
 const otherStores=product?.stores.filter(store=>store!==primaryStore) || [];
+const hasBlog=Boolean(product?.blog_content?.length);
+const hasRelated=related.length > 0;
+const storeKey=(name='other')=>name.toLowerCase().replace(/[^a-z]/g,'').replace('bestbuy','bestbuy');
 ---
 {product ? (
 <Layout title={`${product.title} — The Curated Pick`} description={product.description} image={product.poster_url} demo={catalog.demo} catalogRevision={catalog.revision}>
@@ -20,43 +26,35 @@ const otherStores=product?.stores.filter(store=>store!==primaryStore) || [];
   <div class="share-fallback wrap" id="share-fallback" hidden><label for="share-url">Copy this product link to share it</label><input id="share-url" type="url" readonly /></div>
   <section class="product-detail wrap" data-product-id={product.id} data-product-revision={product.revision}>
     <div class="product-gallery">
-      <div class="detail-image"><img id="gallery-main" src={product.poster_url} alt={product.poster_alt} width="1200" height="1500" fetchpriority="high" /><span class="detail-image-note">Product photos</span></div>
+      <button class="detail-image gallery-zoom" type="button" aria-label="Enlarge product photo"><img id="gallery-main" src={product.poster_url} alt={product.poster_alt} width="1200" height="1500" fetchpriority="high" /></button>
+      <p class="gallery-caption">Click the photo for a closer look <span id="gallery-position">1 / {photos.length}</span></p>
       {photos.length>1 && <div class="gallery-thumbs" aria-label="Product photos">{photos.map((photo,index)=><button type="button" data-gallery-url={photo.url} data-gallery-alt={photo.alt || product.poster_alt} aria-label={`Show photo ${index+1}`} aria-pressed={photo.url===product.poster_url}><img src={photo.url} alt="" width="80" height="100" loading="lazy" /></button>)}</div>}
-      <div class="gallery-highlights" aria-label="Shopping information"><div><span aria-hidden="true">⌕</span><strong>Compare stores</strong><small>Choose a retailer below</small></div><div><span aria-hidden="true">↗</span><strong>Retailer checkout</strong><small>Order with the store</small></div><div><span aria-hidden="true">♡</span><strong>Affiliate find</strong><small>No extra cost to you</small></div></div>
     </div>
     <div class="detail-copy">
-      <div class="product-heading"><div class="detail-store-kicker"><span class="detail-store-dot" aria-hidden="true"></span>{primaryStore ? `Visit the ${primaryStore.name} store` : 'Curated find'}</div><span class="store-status">Affiliate store</span></div>
       <a class="eyebrow category-link" href={`/?category=${encodeURIComponent(product.category)}#discover`}>{product.category} <Icon name="arrow" size={14} /></a>
       <h1>{product.title}</h1>
-      <p class="product-description">{product.description}</p>
+      {primaryStore && <RetailerDetails store={primaryStore} mode="reviews" />}
       {primaryStore && <div class="primary-offer">
-        <div class="offer-heading"><div><span class="offer-label">CHECK CURRENT PRICE</span><h2>{primaryStore.name}</h2></div><span class="offer-link-note">Price and availability at store</span></div>
-        <a href={primaryStore.url} class="primary-store-button" target="_blank" rel="sponsored nofollow noopener noreferrer"><span>Buy on {primaryStore.name}</span><Icon name="arrow" size={19} /></a>
+        <div class="offer-heading"><StoreBrand name={primaryStore.name} /><span class="offer-link-note">Checkout on the retailer’s website</span></div>
+        <RetailerDetails store={primaryStore} mode="price" />
+        <a href={primaryStore.url} class="primary-store-button" data-store={storeKey(primaryStore.name)} target="_blank" rel="sponsored nofollow noopener noreferrer"><span>Check price at {primaryStore.name}</span><Icon name="arrow" size={19} /></a>
         <p class="affiliate-note">We may earn a commission from qualifying purchases, at no extra cost to you. <a href="/disclosure/">Affiliate disclosure</a></p>
       </div>}
-      <section class="product-facts" aria-labelledby="product-facts-title"><h2 id="product-facts-title">Product information</h2><dl><div><dt>Category</dt><dd>{product.category}</dd></div><div><dt>Available at</dt><dd>{[primaryStore?.name,...otherStores.map(store=>store.name)].filter(Boolean).join(', ') || 'Store links coming soon'}</dd></div><div><dt>Product photos</dt><dd>{photos.length}</dd></div></dl></section>
       <section class="about-find" aria-labelledby="about-find-title"><h2 id="about-find-title">About this item</h2><p>{product.description}</p>
-        {product.tags.length > 0 && <nav class="product-tags" aria-label="Explore related interests">{product.tags.map(tag => <a href={`/?q=${encodeURIComponent(tag)}#discover`}>{tag}</a>)}</nav>}
       </section>
-      {otherStores.length > 0 && <section class="other-stores" aria-labelledby="other-stores-title"><div class="other-stores-heading"><h2 id="other-stores-title">Compare stores</h2><p>Choose where you would like to shop.</p></div><div class="store-list">{otherStores.map((store) => <a href={store.url} class="store-button" target="_blank" rel="sponsored nofollow noopener noreferrer"><span class="store-monogram" aria-hidden="true">{store.name.slice(0, 1).toUpperCase()}</span><span class="store-label"><strong>{store.name}</strong><small>{store.note || merchantHost(store.url)}</small></span><Icon name="arrow" size={20} /></a>)}</div></section>}
+      {otherStores.length > 0 && <section class="other-stores" aria-labelledby="other-stores-title"><h2 id="other-stores-title">Also available at</h2><div class="store-list">{otherStores.map((store) => <a href={store.url} class="store-button" data-store={storeKey(store.name)} target="_blank" rel="sponsored nofollow noopener noreferrer"><StoreBrand name={store.name} /><span class="store-label"><small>{store.note || merchantHost(store.url)}</small></span><Icon name="arrow" size={20} /></a>)}</div></section>}
       {!primaryStore && <div class="store-empty"><p>Store links are coming soon.</p><span>Explore more finds while we finish this one.</span></div>}
-      <p class="purchase-note">Prices, reviews, shipping, and availability can change. Check the retailer's page for current details before ordering.</p>
+      <p class="purchase-note">The retailer handles payment, delivery and returns.</p>
     </div>
   </section>
-  {related.length > 0 && <section class="related-section wrap" aria-labelledby="related-title"><div class="section-heading"><div><p class="eyebrow">KEEP EXPLORING</p><h2 id="related-title">You might like these too</h2></div><a class="text-link" href="/#discover">View all finds <Icon name="right" size={16} /></a></div><div class="product-grid related-grid">{related.map((pick, index) => <ProductCard product={pick} index={index + 2} />)}</div></section>}
-  {product.blog_content?.length && <article class="product-blog wrap" aria-labelledby="product-blog-title">
-    <header><p class="eyebrow">THE STORY BEHIND THE FIND</p><h2 id="product-blog-title">{product.blog_title}</h2></header>
-    <div class="product-blog-body">{product.blog_content.map(block => {
-      if (block.type === 'image') return <figure style={`text-align:${block.align || 'center'};justify-content:${block.align === 'left' ? 'flex-start' : block.align === 'right' ? 'flex-end' : 'center'}`}><img src={block.url} alt={block.alt} loading="lazy" /></figure>;
-      if (block.type === 'rich_text') {
-        const Tag = block.tag;
-        return <Tag class={`blog-rich-text ${block.tag === 'p' ? 'blog-rich-paragraph' : ''}`} style={`text-align:${block.align}`}>{block.runs.map(run => <span class:list={[run.bold && 'blog-bold',run.italic && 'blog-italic',run.underline && 'blog-underlined',run.size && `blog-size-${run.size}`,run.font && `blog-font-${run.font.toLowerCase().replaceAll(' ','-')}`]}>{run.text}</span>)}</Tag>;
-      }
-      if (block.type === 'heading') return <h3>{block.text}</h3>;
-      if (block.type === 'paragraph') return <p>{block.text}</p>;
-      return <p class="blog-underline"><u>{block.text}</u></p>;
-    })}</div>
+  {(hasRelated || hasBlog) && <section class:list={['product-lower', 'wrap', hasRelated && 'has-related', hasBlog && 'has-blog']}>
+  {related.length > 0 && <section class="related-section" aria-labelledby="related-title"><div class="section-heading"><div><p class="eyebrow">MORE IN {product.category}</p><h2 id="related-title">Similar finds</h2></div></div><div class="product-grid related-grid">{related.map((pick, index) => <ProductCard product={pick} index={index + 2} />)}</div><a class="text-link" href={`/?category=${encodeURIComponent(product.category)}#discover`}>Explore this category <Icon name="right" size={16} /></a></section>}
+  {hasBlog && <article class="product-blog" aria-labelledby="product-blog-title">
+    <header><p class="eyebrow">THE JOURNAL</p><h2 id="product-blog-title">{product.blog_title}</h2><a class="text-link" href={`/blog/${product.slug}/`}>Read & share this article <Icon name="arrow" size={16} /></a></header>
+    <BlogContent blocks={product.blog_content} />
   </article>}
+  </section>}
+  <dialog class="photo-dialog" id="photo-dialog" aria-label="Enlarged product photo"><button type="button" id="close-photo">Close ×</button><img id="zoom-photo" src={product.poster_url} alt={product.poster_alt} /></dialog>
 </Layout>
 ) : (
   <Layout title="Find not found — The Curated Pick" noindex>
@@ -64,10 +62,20 @@ const otherStores=product?.stores.filter(store=>store!==primaryStore) || [];
   </Layout>
 )}
 <script>
+  const photoDialog=document.querySelector<HTMLDialogElement>('#photo-dialog');
+  document.querySelector('.gallery-zoom')?.addEventListener('click',()=>{
+    const main=document.querySelector<HTMLImageElement>('#gallery-main');
+    const zoom=document.querySelector<HTMLImageElement>('#zoom-photo');
+    if(main&&zoom){zoom.src=main.src;zoom.alt=main.alt;photoDialog?.showModal();}
+  });
+  document.querySelector('#close-photo')?.addEventListener('click',()=>photoDialog?.close());
+  photoDialog?.addEventListener('click',e=>{if(e.target===photoDialog)photoDialog.close();});
   for(const thumbnail of document.querySelectorAll<HTMLButtonElement>('[data-gallery-url]'))thumbnail.addEventListener('click',()=>{
     const main=document.querySelector<HTMLImageElement>('#gallery-main');if(!main)return;
     main.src=thumbnail.dataset.galleryUrl!;main.alt=thumbnail.dataset.galleryAlt || '';
     for(const button of document.querySelectorAll('[data-gallery-url]'))button.setAttribute('aria-pressed',String(button===thumbnail));
+    const thumbs=[...document.querySelectorAll('[data-gallery-url]')];
+    const position=document.querySelector('#gallery-position');if(position)position.textContent=`${thumbs.indexOf(thumbnail)+1} / ${thumbs.length}`;
   });
   const button = document.querySelector<HTMLButtonElement>('#share-product');
   const status = document.querySelector('#share-status');
@@ -90,52 +98,55 @@ const otherStores=product?.stores.filter(store=>store!==primaryStore) || [];
   });
 </script>
 <style>
-  :global(html:has(.product-detail)){--paper:#f7f8fc;--surface:#fff;--ink:#182235;--muted:#617083;--green:#08745f;--line:#e0e5ec;--sage:#f4f6fa;color-scheme:light}
-  .product-detail{grid-template-columns:minmax(300px,.82fr) minmax(0,1.18fr);gap:22px;align-items:start;padding-bottom:46px;color:#182235}
-  .product-gallery,.detail-copy{min-width:0;padding:16px;border:1px solid #e0e5ec;border-radius:14px;background:#fff;box-shadow:0 2px 5px #1822350a}
-  .product-gallery{position:sticky;top:20px}
-  .product-gallery .detail-image{position:relative;top:auto;border:1px solid #edf0f4;border-radius:11px;background:#fff}
-  .product-gallery .detail-image img{aspect-ratio:1/1;object-fit:contain;background:#fff;padding:12px}
-  .product-gallery .detail-image-note{bottom:12px;left:12px;padding:5px 9px;font-size:9px;background:#fff;color:#08745f}
-  .gallery-thumbs{display:flex;gap:9px;overflow-x:auto;padding:12px 0 4px}
-  .gallery-thumbs button{flex:0 0 58px;border:1px solid #e5e9ef;border-radius:8px;padding:3px;background:#fff;cursor:pointer}
-  .gallery-thumbs button[aria-pressed=true]{border:2px solid #08745f;padding:2px}
-  .gallery-thumbs img{display:block;width:100%;height:56px;object-fit:contain}
-  .gallery-thumbs button:focus-visible{outline:2px solid #08745f;outline-offset:2px}
-  .gallery-highlights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding-top:12px;margin-top:10px;border-top:1px solid #edf0f4}
-  .gallery-highlights>div{display:grid;justify-items:center;gap:4px;padding:10px 5px;border-radius:8px;background:#f7f8fb;text-align:center}
-  .gallery-highlights span{color:#08745f;font-size:16px;line-height:1}
-  .gallery-highlights strong{font-size:10px;color:#182235}
-  .gallery-highlights small{font-size:8px;color:#738093}
-  .detail-copy{padding:20px}
-  .product-heading{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-  .detail-store-kicker{display:flex;align-items:center;gap:6px;margin:0;color:#08745f;font-size:10px;font-weight:700}
-  .detail-store-dot{width:7px;height:7px;border-radius:50%;background:#18a879}
-  .store-status{padding:3px 7px;border-radius:20px;background:#eef8f4;color:#08745f;font-size:9px;font-weight:650}
-  .category-link{display:inline-flex;align-items:center;gap:5px;margin-top:11px;color:#08745f;font-size:10px;font-weight:700}
-  .detail-copy h1{font-size:clamp(25px,2.6vw,34px);line-height:1.14;letter-spacing:-.8px;margin:7px 0 12px;color:#182235}
-  .product-description{font-size:13px;line-height:1.72;color:#4d596a}
-  .primary-offer{margin-top:17px;padding:14px;border:1px solid #e2e6ed;border-radius:12px;background:#f8f9fc}
-  .offer-heading{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:10px}
-  .offer-heading h2{font-size:17px;margin-top:3px;color:#182235}
-  .offer-label{font-size:8px;font-weight:750;letter-spacing:.09em;color:#617083}
-  .offer-link-note{color:#718095;font-size:9px;text-align:right}
-  .primary-store-button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:42px;padding:0 14px;border-radius:8px;background:#ff9900;color:#fff;font-size:12px;font-weight:750;transition:filter .2s,transform .2s}
-  .primary-store-button:hover{filter:brightness(.95);transform:translateY(-1px)}
-  .primary-store-button svg{transform:rotate(-45deg)}
-  .primary-offer .affiliate-note{margin-top:8px;font-size:8px;line-height:1.6;color:#617083}
-  .about-find,.product-facts,.other-stores{margin-top:14px;padding:15px;border:1px solid #e2e6ed;border-radius:12px;background:#fff}
-  .about-find h2,.product-facts h2,.other-stores h2{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#182235}
-  .about-find>p{font-size:12px;color:#4d596a;line-height:1.75;margin-top:9px}
-  .about-find .product-tags{margin-top:12px}
-  .about-find .product-tags a{background:#f0f3f7;color:#526175;font-size:9px;padding:5px 9px}
-  .product-facts dl{display:grid;grid-template-columns:1fr 1fr;gap:9px 18px;margin-top:12px}
-  .product-facts dl>div{display:grid;grid-template-columns:minmax(72px,.7fr) minmax(0,1.3fr);gap:8px;font-size:10px}
-  .product-facts dt{color:#718095}.product-facts dd{margin:0;color:#182235;font-weight:650;overflow-wrap:anywhere}
-  .other-stores-heading p{font-size:10px;color:#617083;margin-top:4px}
-  .other-stores .store-list{margin-top:10px;gap:7px}
-  .other-stores .store-button{min-height:52px;padding:8px 10px;border-color:#e2e6ed}
-  .other-stores .store-monogram{width:29px;height:29px;font-size:14px;background:#f0f3f7;color:#08745f}
-  .purchase-note{padding:0 3px;color:#68768a;font-size:9px}
-  @media(max-width:760px){.product-detail{grid-template-columns:1fr;gap:14px;padding-bottom:30px}.product-gallery{position:static}.product-gallery .detail-image img{aspect-ratio:1.05}.detail-copy{padding:16px}.detail-copy h1{font-size:28px}.product-facts dl{grid-template-columns:1fr}.gallery-highlights strong{font-size:9px}}
+  .product-detail{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:32px;align-items:start;padding-bottom:56px}
+  .product-gallery,.detail-copy{min-width:0;border:1px solid var(--line);border-radius:18px;background:var(--surface);padding:20px}
+  .product-gallery{position:sticky;top:24px}.detail-copy{padding:28px}
+  .product-gallery .detail-image{display:block;position:static;width:100%;padding:12px;border:1px solid #e9e9e9;border-radius:12px;background:#fff;cursor:zoom-in;overflow:hidden}
+  .detail-image img{width:100%;height:auto;aspect-ratio:1;object-fit:contain;background:#fff;transition:transform .3s ease}
+  .detail-image:hover img{transform:scale(1.025)}
+  .gallery-caption{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted);margin-top:12px}
+  .gallery-thumbs{display:flex;gap:10px;overflow-x:auto;margin-top:16px;padding:4px}
+  .gallery-thumbs button{flex:0 0 64px;padding:4px;border:1px solid var(--line);border-radius:9px;background:#fff}
+  .gallery-thumbs button[aria-pressed=true]{outline:2px solid var(--green);outline-offset:1px}
+  .gallery-thumbs img{width:100%;height:58px;object-fit:contain}
+  .category-link{display:inline-flex;gap:6px;align-items:center;color:var(--green);font-size:11px}
+  .detail-copy h1{font-size:clamp(27px,3vw,38px);line-height:1.15;letter-spacing:-.035em;margin:12px 0 24px;color:var(--ink)}
+  .primary-offer{padding:20px;background:var(--paper);border:1px solid var(--line);border-radius:12px}
+  .offer-heading{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:20px}
+  .offer-link-note{font-size:12px;color:var(--muted);text-align:right;max-width:145px}
+  .primary-store-button{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 18px;min-height:50px;border-radius:9px;background:#006b5b;color:#fff;font-size:15px;font-weight:750;transition:transform .18s,filter .18s}
+  .primary-store-button:hover{transform:translateY(-2px);filter:brightness(1.07)}
+  .primary-store-button[data-store=amazon]{background:#ff9900;color:#182235}
+  .primary-store-button[data-store=walmart]{background:#0071ce}
+  .primary-store-button[data-store=daraz]{background:#c43b00}
+  .primary-store-button[data-store=aliexpress]{background:#c5261d}
+  .primary-store-button[data-store=alibaba]{background:#bc4900}
+  .primary-store-button[data-store=temu]{background:#b53d00}
+  .review-link{display:inline-flex;gap:5px;align-items:center;min-height:44px;font-size:13px;color:var(--green);text-decoration:underline;text-underline-offset:4px}
+  .primary-offer .affiliate-note{font-size:11px;color:var(--muted);line-height:1.65;margin:4px 0 0}
+  .about-find,.other-stores{padding-top:24px;margin-top:24px;border-top:1px solid var(--line)}
+  .about-find h2,.other-stores h2{font-size:15px;color:var(--ink);letter-spacing:0}
+  .about-find p{font-size:15px;line-height:1.85;color:var(--muted);margin-top:12px;white-space:pre-line}
+  .other-stores .store-list{margin-top:14px;gap:10px}
+  .store-button{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);transition:transform .18s,border-color .18s}
+  .store-button:hover{border-color:var(--green);transform:translateX(2px)}
+  .store-label{margin-left:auto}.store-label small{color:var(--muted);font-size:11px}
+  .purchase-note{color:var(--muted);font-size:12px;margin:20px 0 0}
+  .product-lower{display:grid;grid-template-columns:1fr;gap:32px;align-items:start;padding-bottom:64px}
+  .product-lower.has-related.has-blog{grid-template-columns:minmax(0,1fr) minmax(0,3fr)}
+  .product-lower .related-section{min-width:0;margin:0;padding:0;border:0}
+  .product-lower .section-heading{display:block;margin-bottom:20px}
+  .section-heading .eyebrow{font-size:10px;color:var(--muted);margin-bottom:8px}
+  .section-heading h2{font-size:22px}
+  .product-lower .related-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+  .product-lower.has-blog .related-grid{grid-template-columns:1fr}
+  .product-blog{min-width:0;max-width:none;padding:32px 36px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+  .product-blog>header{padding:0 0 24px;margin:0 0 24px;max-width:none;border-bottom:1px solid var(--line)}
+  .product-blog>header h2{font-family:var(--sans);font-size:clamp(26px,3vw,36px);font-weight:650;letter-spacing:-.025em;margin:12px 0 4px}
+  .photo-dialog{padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--ink);max-width:95vw;max-height:94vh}
+  .photo-dialog::backdrop{background:#070b14cc}
+  .photo-dialog img{max-width:85vw;max-height:76vh;object-fit:contain;background:#fff}
+  .photo-dialog button{display:block;margin:0 0 12px auto;padding:8px 16px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink)}
+  @media(max-width:800px){.product-detail{grid-template-columns:1fr;gap:18px}.product-gallery{position:static}.detail-copy{padding:22px}.product-lower.has-related.has-blog{grid-template-columns:1fr}.product-lower.has-blog .product-blog{grid-row:1}.product-lower .related-grid,.product-lower.has-blog .related-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.product-blog{padding:24px}.store-label{display:none}}
+  @media(prefers-reduced-motion:reduce){.detail-image img,.primary-store-button,.store-button{transition:none}}
 </style>

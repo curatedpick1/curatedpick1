@@ -1,12 +1,29 @@
 ---
 import type { Product } from '../../shared/catalog';
 import Icon from './Icon.astro';
+import { retailerDetails } from '../../shared/retailer';
 interface Props { product: Product; index?: number; }
 const { product, index = 0 } = Astro.props;
+const store=product.stores.find(s=>s.name.toLowerCase()==='amazon') || product.stores[0];
+const details=store ? retailerDetails(store) : undefined;
 ---
 <article class="pick" data-product-card data-category={product.category} data-search={`${product.title} ${product.category} ${product.description} ${product.tags.join(' ')} ${product.stores.map(s => s.name).join(' ')}`.toLowerCase()}>
   <a href={`/products/${product.slug}/`} class="pick-link">
-    <div class="pick-image"><img src={product.poster_url} alt={product.poster_alt} width="700" height="650" loading={index < 3 ? 'eager' : 'lazy'} decoding="async" />{product.featured && <span class="pick-badge">Curated pick</span>}</div>
-    <div class="pick-body"><p class="pick-meta">{product.category}</p><h3>{product.title}</h3><p class="pick-description">{product.description}</p><div class="pick-footer"><span>{product.stores.length ? `${product.stores.length} ${product.stores.length === 1 ? 'store' : 'stores'} to explore` : 'Preview product'}</span><span class="pick-cta">View find <Icon name="arrow" size={15} /></span></div></div>
+    <div class="pick-image"><img src={product.poster_url} alt={product.poster_alt} width="700" height="650" loading={index < 3 ? 'eager' : 'lazy'} decoding="async" /></div>
+    <div class="pick-body"><p class="pick-meta">{product.category}</p><h3>{product.title}</h3><p class="pick-description">{product.description}</p><div class="pick-footer"><span>{details?.price || (product.stores.length ? `${product.stores.length} ${product.stores.length === 1 ? 'store' : 'stores'}` : 'Preview product')}</span><span class="pick-cta">View find <Icon name="arrow" size={15} /></span></div></div>
   </a>
+  {store && details?.count !== undefined && <a class="card-review" href={details.reviewUrl} target="_blank" rel="sponsored nofollow noopener noreferrer">{details.rating !== undefined ? `★ ${details.rating.toFixed(1)} · ` : ''}{details.count.toLocaleString('en-US')} reviews at {store.name} ↗</a>}
 </article>
+<style>
+  .pick{border:1px solid var(--line);border-radius:16px;background:var(--surface);overflow:hidden;transition:transform .2s,border-color .2s}
+  .pick:hover{transform:translateY(-3px);border-color:var(--green)}
+  .pick-image{margin:12px 12px 0;border:1px solid #eceef0;border-radius:10px;background:#fff;overflow:hidden}
+  .pick-image img{aspect-ratio:1.12;object-fit:contain;background:#fff;padding:14px}
+  .pick-body{padding:16px}.pick-meta{font-size:10px;color:var(--muted);letter-spacing:.07em}
+  h3{font-size:17px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .pick-description{font-size:13px;line-height:1.65;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .pick-footer{border-top:1px solid var(--line);padding-top:12px;margin-top:14px;gap:8px;font-size:11px}
+  .pick-cta{color:var(--green);white-space:nowrap}
+  .card-review{display:block;padding:0 16px 16px;color:var(--green);text-decoration:underline;font-size:12px}
+  @media(prefers-reduced-motion:reduce){.pick{transition:none}}
+</style>

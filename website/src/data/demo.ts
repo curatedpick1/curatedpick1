@@ -14,5 +14,6 @@ export const demoCatalog: Catalog = {
     id: `demo-${i + 1}`, slug: p[0], title: p[1], category: p[2], poster_url: `/demo/${p[3]}.jpg`,
     description: p[4], tags: [...p[5]], poster_alt: p[6], stores: [], featured: i === 0,
     revision: 1, created_at: `2026-09-0${8 - i}T12:00:00Z`,
+    ...(i===0 ? {blog_title:'Make a little room for a slower evening',blog_content:[{type:'heading' as const,text:'Start with the light'},{type:'paragraph' as const,text:'A reading corner does not need a complete room makeover. Begin with a comfortable seat and a light you can reach without getting up. Place the lamp beside your shoulder rather than directly in front of you to keep glare away from the page.'},{type:'heading' as const,text:'Measure before you choose'},{type:'paragraph' as const,text:'Check the footprint of the lamp against your table, and make sure the shade leaves enough room for a book and a glass of water. The best choice is the one that works with the space you already have.'}]} : {}),
   })),
 };

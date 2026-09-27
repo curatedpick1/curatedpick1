@@ -1,10 +1,11 @@
-export interface StoreLink { name: string; url: string; note?: string }
+export interface RetailerSnapshot { price?: number; currency?: string; rating?: number; review_count?: number; checked_at: string; source: 'retailer-api'; review_url?: string }
+export interface StoreLink { name: string; url: string; note?: string; snapshot?: RetailerSnapshot }
 export interface ProductImage { url: string; pin_url?: string; alt?: string }
 export type ProductBlogBlock =
   | { type: 'heading'; text: string }
   | { type: 'paragraph'; text: string }
   | { type: 'underline'; text: string }
-  | { type: 'image'; url: string; alt: string; align?: 'left' | 'center' | 'right' }
+  | { type: 'image'; url: string; alt: string; align?: 'left' | 'center' | 'right'; width?: number }
   | { type: 'rich_text'; tag: 'p' | 'h2' | 'h3'; align: 'left' | 'center' | 'right'; runs: { text: string; bold?: boolean; italic?: boolean; underline?: boolean; size?: 'small' | 'normal' | 'large' | 'xlarge'; font?: 'Arial' | 'Impact' | 'Georgia' | 'Verdana' | 'Trebuchet MS' | 'Times New Roman' | 'Courier New' }[] };
 export interface Product {
   id: string;
@@ -53,6 +54,7 @@ export function validateProduct(value: unknown, demo = false): Product {
       if (block.type === 'image') {
         httpsUrl(block.url);
         if (typeof block.alt !== 'string' || block.alt.length > 500) throw new Error(`Invalid blog image: ${p.slug}`);
+        if (block.width !== undefined && (!Number.isInteger(block.width) || block.width < 15 || block.width > 100)) throw new Error(`Invalid blog image width: ${p.slug}`);
       } else if (block.type === 'rich_text') {
         if (!['p','h2','h3'].includes(block.tag) || !['left','center','right'].includes(block.align) || !Array.isArray(block.runs) || block.runs.length > 300) throw new Error(`Invalid rich blog text: ${p.slug}`);
         let length = 0;
@@ -79,7 +81,7 @@ export function validateProduct(value: unknown, demo = false): Product {
 export function relatedProducts(product: Product, products: Product[], limit = 4): Product[] {
   const tags = new Set(product.tags.map(t => t.toLowerCase()));
   const score = (p: Product) => (p.category === product.category ? 10 : 0) + p.tags.filter(t => tags.has(t.toLowerCase())).length * 3;
-  return products.filter(p => p.id !== product.id).sort((a, b) => score(b) - score(a) || Date.parse(b.created_at) - Date.parse(a.created_at) || a.id.localeCompare(b.id)).slice(0, limit);
+  return products.filter(p => p.id !== product.id && p.category.toLowerCase() === product.category.toLowerCase()).sort((a, b) => score(b) - score(a) || Date.parse(b.created_at) - Date.parse(a.created_at) || a.id.localeCompare(b.id)).slice(0, limit);
 }
 
 export function productUrl(origin: string, slug: string) {

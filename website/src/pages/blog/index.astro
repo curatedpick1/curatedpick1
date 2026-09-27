@@ -1,0 +1,11 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import {getCatalog} from '../../lib/catalog';
+export const prerender=false;
+const catalog=await getCatalog();
+const products=catalog.products.filter(p=>p.blog_content?.length);
+---
+<Layout title="The journal | The Curated Pick" description="Ideas, details and guides behind our product finds." demo={catalog.demo} catalogRevision={catalog.revision}>
+  <section class="journal wrap"><header><p class="eyebrow">The Curated Pick</p><h1>The journal</h1><p>Ideas and details behind the finds.</p></header><div class="articles">{products.map(p=><article><a href={`/blog/${p.slug}/`}><img src={p.poster_url} alt={p.poster_alt} width="600" height="400" loading="lazy"/><p class="eyebrow">{p.category}</p><h2>{p.blog_title}</h2><span class="text-link">Read the article →</span></a></article>)}</div>{!products.length&&<p>Our first articles are on the way. <a class="text-link" href="/#discover">Explore the collection →</a></p>}</section>
+</Layout>
+<style>.journal{padding-block:40px 80px}header{max-width:650px;margin-bottom:36px}h1{font-size:clamp(36px,6vw,60px);margin:12px 0}header p{color:var(--muted)}.articles{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:28px}article{max-width:440px}article img{width:100%;height:240px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:12px}article .eyebrow{color:var(--muted);margin:18px 0 8px}h2{font-size:24px}</style>
