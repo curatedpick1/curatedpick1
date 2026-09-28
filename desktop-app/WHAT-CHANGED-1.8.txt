@@ -1,0 +1,12 @@
+Curated Studio 1.8
+
+Start typing any product title. The app now immediately suggests a category,
+tags and a draft description, even before a photo has been added.
+
+With a photo, Curated Studio asks Gemini for image-aware suggestions and uses
+the photo suggestions when they return. If the AI service is unavailable or
+returns blank category or tags, the title based suggestions remain filled in.
+You can edit every suggested field. Your manual edits are kept.
+
+Install private/Curated-Studio-Setup-1.8.0.exe over the previous version.
+Local drafts are kept.
